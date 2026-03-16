@@ -1,0 +1,31 @@
+# Canopy Seed — Python Dependencies
+# Install with: pip install -r requirements.txt
+# Then run:     playwright install chromium   (one-time, ~150MB)
+
+# ── Web server ───────────────────────────────────────────────────────────────
+aiohttp>=3.9.0
+
+# ── HTTP client (research engine, probe_endpoint, web_fetch) ─────────────────
+httpx>=0.27.0
+
+# ── AI SDKs ──────────────────────────────────────────────────────────────────
+# anthropic — Claude escalation backend in ai_backend.py
+anthropic>=0.40.0
+# google-genai — NOT required by the pipeline (uses raw REST), but listed so
+# generated apps that import `google.genai` work inside the same venv.
+google-genai>=1.0.0
+
+# ── Async SQLite ─────────────────────────────────────────────────────────────
+aiosqlite>=0.20.0
+
+# ── Environment loading ──────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── Telegram bot (engine.py only — not needed for standalone start.py) ───────
+python-telegram-bot>=21.0
+
+# ── Process management ───────────────────────────────────────────────────────
+psutil>=5.9.0
+
+# ── Headless browser for Manager screenshot + console-log tools ──────────────
+playwright>=1.40

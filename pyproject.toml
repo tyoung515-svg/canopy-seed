@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canopy-seed"
+version = "1.0.0"
+description = "Canopy Seed — Automated AI build pipeline with swarm agents, Giant Brain, and autonomous debugging"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Travis Young"}]
+
+dependencies = [
+    "aiohttp>=3.9.0",
+    "httpx>=0.27.0",
+    "anthropic>=0.40.0",
+    "google-genai>=1.0.0",
+    "aiosqlite>=0.20.0",
+    "python-dotenv>=1.0.0",
+    "python-telegram-bot>=21.0",
+    "psutil>=5.9.0",
+    "playwright>=1.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+canopy-seed = "start:main"
+
+[tool.setuptools.packages.find]
+include = ["core*", "tools*", "memory*", "config*", "skills*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canopy Seed — Naturally Growing Software</title>
+  <meta name="description" content="Canopy Seed turns a conversation into working software — without writing a single line of code. $0.31 per complete application. Under 5 minutes. Local-first." />
+  <meta property="og:title" content="Canopy Seed — Naturally Growing Software" />
+  <meta property="og:description" content="One person. No team. Three weeks. Under $200. Built an AI software factory that produces complete, tested, working applications for $0.31 each." />
+  <meta property="og:url" content="https://canopyseeds.com" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Canopy Seed — Naturally Growing Software" />
+  <meta name="twitter:description" content="$0.31 per complete working application. Under 5 minutes. 168 tests passing. canopyseeds.com" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="health-banner" class="health-banner hidden" role="status" aria-live="polite">
+    Start Canopy Seed first: open a terminal and run <strong>python start.py</strong>
+  </div>
+
+  <main id="app" class="app">
+    <section id="state-welcome" class="state state-active" aria-label="Welcome">
+      <div class="welcome-card">
+        <div class="logo-wrap" aria-hidden="true">
+          <svg class="logo" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+            <path d="M38 26c6-10 16-14 22-14s16 4 22 14c3 5 2 11-2 15-4 4-10 5-15 3-2-1-3-1-5-1s-3 0-5 1c-5 2-11 1-15-3-4-4-5-10-2-15z" fill="#7CB342"/>
+            <path d="M31 25c-7 2-12 8-12 15 0 8 6 14 14 14 7 0 10-3 12-6" fill="none" stroke="#4A7C23" stroke-width="3" stroke-linecap="round"/>
+            <path d="M89 25c7 2 12 8 12 15 0 8-6 14-14 14-7 0-10-3-12-6" fill="none" stroke="#4A7C23" stroke-width="3" stroke-linecap="round"/>
+            <path d="M45 18l5 4M61 14v6M77 18l-5 4" stroke="#B5651D" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="45" cy="18" r="2" fill="#B5651D"/>
+            <circle cx="61" cy="14" r="2" fill="#B5651D"/>
+            <circle cx="77" cy="18" r="2" fill="#B5651D"/>
+            <path d="M60 44c8 6 8 13 0 20-8-7-8-14 0-20z" fill="#4E6E2F"/>
+            <path d="M60 64v8" stroke="#4A7C23" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <h1>Canopy Seed</h1>
+        <p class="tagline">Naturally Growing Software</p>
+
+        <hr class="divider" />
+
+        <div style="display:flex; gap:48px; justify-content:center; margin-bottom:10px; flex-wrap:wrap; width:100%;">
+          <div style="text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#2D5016;">$0.31</div>
+            <div style="font-size:12px; color:#64748b; margin-top:3px; letter-spacing:0.02em;">per working app</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#2D5016;">&lt;5 min</div>
+            <div style="font-size:12px; color:#64748b; margin-top:3px; letter-spacing:0.02em;">wall-clock build time</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#2D5016;">168</div>
+            <div style="font-size:12px; color:#64748b; margin-top:3px; letter-spacing:0.02em;">tests passing</div>
+          </div>
+        </div>
+
+        <p class="intro">Describe your idea and we'll help you build it.</p>
+        <p class="subtext">No technical knowledge needed. Just tell us what you want.</p>
+
+        <div class="model-area">
+          <span class="model-label">Powered by:</span>
+          <div class="model-pills" role="radiogroup" aria-label="Model selector">
+            <label class="pill">
+              <input type="radio" name="model" value="claude" checked />
+              <span>⬤ Claude (recommended)</span>
+            </label>
+            <label class="pill">
+              <input type="radio" name="model" value="gemini" />
+              <span>○ Gemini</span>
+            </label>
+            <label class="pill">
+              <input type="radio" name="model" value="local" />
+              <span>○ Local (Nemo)</span>
+            </label>
+          </div>
+        </div>
+
+        <button id="plant-seed-btn" class="btn btn-primary btn-xl" type="button">Plant Your Seed →</button>
+
+        <div style="margin-top:16px; padding-top:20px; border-top:1px solid rgba(74,124,35,0.15); width:100%;">
+          <p style="font-size:13px; color:#64748b; margin-bottom:10px;">
+            Already have a project context? Skip the conversation.
+          </p>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input id="load-context-path" type="text"
+              placeholder="Path to PROJECT_CONTEXT.json"
+              style="flex:1; padding:9px 12px; background:#f8faf5; border:1px solid rgba(74,124,35,0.3);
+                     border-radius:8px; color:#2D5016; font-size:13px; outline:none;"
+              value="exports/PROJECT_CONTEXT.json" />
+            <button id="load-context-btn"
+              style="padding:9px 18px; background:#4A7C23; color:#fff; border:none;
+                     border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              Load & Build →
+            </button>
+          </div>
+          <div id="load-context-status" style="font-size:12px; color:#e53935; margin-top:6px;"></div>
+        </div>
+
+        <p class="privacy-note">Your data stays on your computer. No account needed. &nbsp;·&nbsp; <a href="https://canopyseeds.com" target="_blank" style="color:inherit;">canopyseeds.com</a> &nbsp;·&nbsp; <a href="mailto:Contact@canopyseed.com" style="color:inherit;">Contact@canopyseed.com</a></p>
+      </div>
+    </section>
+
+    <section id="state-conversation" class="state" aria-label="Conversation" hidden>
+      <div class="conversation-layout">
+        <section class="chat-panel card" aria-label="Canopy chat">
+          <header class="chat-header">
+            <h2>🌱 Canopy</h2>
+            <div id="header-research-indicator" class="header-research-indicator hidden"></div>
+          </header>
+
+          <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+
+          <div class="composer">
+            <div id="image-drop-zone" class="image-drop-zone" tabindex="0" role="button" aria-label="Drop or choose an image">
+              📎 Drop a sketch or screenshot
+              <input id="image-input" type="file" accept="image/*" hidden />
+            </div>
+            <div id="image-preview" class="image-preview hidden"></div>
+
+            <div class="input-row">
+              <textarea id="chat-input" rows="3" placeholder="Describe your idea..." aria-label="Describe your idea"></textarea>
+              <button id="send-btn" class="btn btn-primary" type="button">Send →</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="context-panel card" aria-label="Project context">
+          <h3>Your Project Shape</h3>
+          <p class="panel-subtitle">(Building as you talk)</p>
+
+          <div id="context-fields" class="context-fields">
+            <div class="context-field" data-context-key="name"><span>📋 Name:</span> <strong>—</strong></div>
+            <div class="context-field" data-context-key="goal"><span>🎯 Goal:</span> <strong>—</strong></div>
+            <div class="context-field" data-context-key="users"><span>👥 Users:</span> <strong>—</strong></div>
+            <div class="context-field" data-context-key="features"><span>🔧 Features:</span> <strong>—</strong></div>
+          </div>
+
+          <div id="sidebar-skeleton" class="sidebar-skeleton" aria-hidden="true">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+
+          <div class="sidebar-section">
+            <h4>Research</h4>
+            <div id="research-list" class="chip-list">
+              <p class="empty-text">Research entries appear here as they're found.</p>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <h4>Open Questions</h4>
+            <ul id="open-questions" class="open-questions">
+              <li class="empty-text">Questions Big Brain still needs answered.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="state-building" class="state" aria-label="Building" hidden>
+      <div class="building-wrap card">
+        <h2>✅ Your seed is ready to plant.</h2>
+
+        <article class="summary-card">
+          <h3 id="summary-name">PROJECT: —</h3>
+          <p id="summary-description">Your project summary will appear here.</p>
+          <p><strong>Key Features:</strong> <span id="summary-features">—</span></p>
+          <p><strong>Target Users:</strong> <span id="summary-users">—</span></p>
+          <p><strong>Architecture:</strong> <span id="summary-architecture">—</span></p>
+          <p><strong>Research Used:</strong> <span id="summary-research">0 sources</span></p>
+        </article>
+
+        <div class="action-row">
+          <button id="start-building-btn" class="btn btn-primary" type="button">🚀 Start Building</button>
+          <button id="export-overview-btn" class="btn btn-secondary" type="button">📄 Export Overview</button>
+          <button id="go-back-btn" class="btn btn-ghost" type="button">↩ Go Back</button>
+        </div>
+
+        <div id="snapshot-bar" class="snapshot-bar">🕐 Version 1 of 3 slots available</div>
+      </div>
+    </section>
+  </main>
+
+  <template id="chat-message-template">
+    <article class="chat-message">
+      <div class="bubble"></div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
+  <!-- CS3 — Research Detail Modal -->
+  <div id="cs3-research-modal" class="cs3-modal hidden">
+    <div class="cs3-modal-backdrop" onclick="cs3CloseResearch()"></div>
+    <div class="cs3-modal-card">
+      <div class="cs3-modal-header">
+        <h3 id="cs3-modal-query"></h3>
+        <button onclick="cs3CloseResearch()">✕</button>
+      </div>
+      <div class="cs3-modal-summary" id="cs3-modal-summary"></div>
+      <div class="cs3-modal-citations">
+        <h4>Sources</h4>
+        <ul id="cs3-modal-citations-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- CS3 — Export Modal -->
+  <div id="cs3-export-modal" class="cs3-modal hidden">
+    <div class="cs3-modal-backdrop"></div>
+    <div class="cs3-modal-card cs3-export-card">
+      
+      <div class="cs3-export-header">
+        <div class="cs3-export-icon">🌳</div>
+        <h2>Your Project Overview is Ready</h2>
+      </div>
+      
+      <!-- Step 1: Files saved -->
+      <div class="cs3-export-step cs3-step-done">
+        <span class="cs3-step-num">✓</span>
+        <div>
+          <strong>Files saved to your exports folder</strong>
+          <p id="cs3-export-paths"></p>
+        </div>
+      </div>
+      
+      <!-- Step 2: What's in the export -->
+      <div class="cs3-export-step">
+        <span class="cs3-step-num">2</span>
+        <div>
+          <strong>PROJECT_OVERVIEW.md</strong>
+          <p>A human-readable summary of your project: goals, features, architecture notes, and all research citations. Use this to share with anyone.</p>
+        </div>
+      </div>
+      
+      <!-- Step 3: NotebookLM optional -->
+      <div class="cs3-export-step cs3-export-notebooklm">
+        <span class="cs3-step-num">3</span>
+        <div>
+          <strong>Optional: Listen to your project overview (NotebookLM)</strong>
+          <p>Google's NotebookLM can turn this document into an audio conversation. It's free and takes 2 minutes.</p>
+          <ol class="cs3-notebooklm-steps">
+            <li>Open <a href="https://notebooklm.google.com" target="_blank">notebooklm.google.com</a></li>
+            <li>Click "New Notebook" → "Upload"</li>
+            <li>Upload the PROJECT_OVERVIEW.md file you just saved</li>
+            <li>Click "Audio Overview" and listen</li>
+          </ol>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="cs3-export-actions">
+        <button class="cs3-btn-primary" onclick="cs3CloseExport()">Done</button>
+        <button class="cs3-btn-secondary" onclick="cs3CopyExportPath()">Copy File Path</button>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- CS3 — Snapshot Panel (to be inserted in state-building) -->
+  <div id="cs3-snapshot-panel" class="cs3-snapshot-panel" hidden>
+    <div class="cs3-snapshot-header">
+      <h4>🕐 Version History</h4>
+      <span class="cs3-snapshot-count" id="cs3-snapshot-count">0 of 3 snapshots</span>
+    </div>
+    
+    <div id="cs3-snapshot-list" class="cs3-snapshot-list">
+      <!-- Populated by cs3LoadSnapshots() -->
+    </div>
+    
+    <div class="cs3-snapshot-empty hidden" id="cs3-snapshot-empty">
+      <p>No snapshots yet. Snapshots are created automatically when your project is built.</p>
+    </div>
+  </div>
+
+</body>
+</html>

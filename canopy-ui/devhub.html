@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canopy DevHub</title>
+  <style>
+    :root {
+      --green-dark: #2D5016; --green-mid: #4A7C23; --green-light: #7CB342;
+      --green-pale: #C5E1A5; --copper: #B5651D; --copper-light: #D4845A;
+      --cream: #F7F3ED; --white: #FFFFFF; --gray-light: #F0EDE8;
+      --gray-mid: #C8C2B8; --gray-text: #6B6560; --shadow: rgba(45,80,22,0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; color: #3D3A36; background: var(--cream); }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: var(--green-dark); color: #fff;
+      padding: 10px 20px; display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .topbar-logo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.3px; }
+    .topbar-sep { opacity: 0.3; }
+    .topbar-project { font-size: 0.9rem; opacity: 0.85; flex: 1; }
+    .topbar-status { font-size: 0.8rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+    .status-ready   { background: rgba(124,179,66,0.3); color: #c5e1a5; }
+    .status-building { background: rgba(181,101,29,0.3); color: #f5c89a; }
+    .status-done    { background: rgba(255,255,255,0.15); color: #fff; }
+    .topbar-home-btn {
+      color: var(--green-mid, #4caf50);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--green-light, #a5d6a7);
+      margin-right: 12px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .topbar-home-btn:hover {
+      background: var(--green-pale, #f1f8e9);
+    }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 16px; flex: 1; min-height: 0; overflow: hidden; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; overflow: auto; } }
+
+    /* ── Cards ── */
+    .card { background: var(--white); border: 1px solid rgba(74,124,35,0.18); border-radius: 12px; box-shadow: 0 4px 14px var(--shadow); }
+
+    /* ── Left column ── */
+    .left { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
+
+    /* Project spec */
+    .spec-card { padding: 18px 20px; }
+    .spec-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .spec-icon { font-size: 1.4rem; }
+    .spec-name { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); }
+    .spec-desc { font-size: 0.9rem; color: #3D3A36; line-height: 1.6; margin-bottom: 14px; }
+    .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .spec-field { background: var(--gray-light); border-radius: 8px; padding: 10px 12px; }
+    .spec-field-label { font-size: 0.75rem; color: var(--gray-text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+    .spec-field-value { font-size: 0.88rem; color: #3D3A36; line-height: 1.5; }
+    .spec-field.full { grid-column: 1 / -1; }
+
+    /* Build log */
+    .log-card { flex: 1; min-height: 200px; display: flex; flex-direction: column; }
+    .log-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-mid); display: flex; align-items: center; gap: 8px; }
+    .log-header h3 { font-size: 0.95rem; color: var(--green-dark); }
+    .log-body { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.83rem; font-family: 'Consolas', 'Cascadia Code', monospace; }
+    .log-entry { display: flex; gap: 10px; }
+    .log-time { color: var(--gray-text); flex-shrink: 0; }
+    .log-msg { color: #3D3A36; }
+    .log-msg.ok { color: var(--green-mid); }
+    .log-msg.warn { color: var(--copper); }
+    .log-msg.info { color: #5e7bd4; }
+    .log-msg.output { color: #3D3A36; white-space: pre-wrap; background: rgba(0,0,0,0.03); padding: 6px 8px; border-radius: 4px; border-left: 3px solid var(--green-mid); font-size: 0.8rem; }
+    .log-empty { color: var(--gray-text); font-style: italic; font-family: inherit; }
+
+    /* ── Right column ── */
+    .right { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+    /* Launch panel */
+    .launch-card { padding: 18px; }
+    .launch-card h3 { color: var(--green-dark); margin-bottom: 12px; font-size: 1rem; }
+    .btn { border: 0; border-radius: 8px; padding: 11px 18px; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 180ms ease; width: 100%; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-primary { background: var(--green-mid); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .btn-secondary { background: var(--gray-light); color: var(--green-dark); margin-top: 8px; border: 1px solid var(--gray-mid); }
+    .btn-secondary:hover:not(:disabled) { background: var(--green-pale); }
+    .launch-note { font-size: 0.8rem; color: var(--gray-text); margin-top: 10px; line-height: 1.5; }
+
+    /* Agent cards */
+    .agents-card { padding: 16px; }
+    .agents-card h3 { color: var(--green-dark); margin-bottom: 12px; font-size: 1rem; }
+    .agent-list { display: flex; flex-direction: column; gap: 8px; }
+    .agent-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--gray-light); border-radius: 8px; border: 1px solid transparent; transition: border-color 200ms; }
+    .agent-item.active { border-color: var(--green-light); background: #f0f8e8; }
+    .agent-item.busy { border-color: var(--copper-light); background: #fff8f2; }
+    .agent-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--gray-mid); }
+    .agent-item.active .agent-dot { background: var(--green-mid); box-shadow: 0 0 0 3px rgba(74,124,35,0.2); }
+    .agent-item.busy .agent-dot { background: var(--copper); animation: pulse 1.4s infinite; }
+    .agent-name { font-size: 0.87rem; font-weight: 600; color: #3D3A36; flex: 1; }
+    .agent-status { font-size: 0.75rem; color: var(--gray-text); }
+    .agent-item.active .agent-status { color: var(--green-mid); }
+    .agent-item.busy .agent-status { color: var(--copper); }
+    .no-agents { font-size: 0.85rem; color: var(--gray-text); line-height: 1.6; }
+
+    /* Context file chip */
+    .context-chip { display: flex; align-items: center; gap: 8px; background: #f0f8e8; border: 1px solid rgba(74,124,35,0.25); border-radius: 8px; padding: 9px 12px; font-size: 0.82rem; color: var(--green-dark); margin-top: 10px; min-width: 0; }
+    .context-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+    @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--green-pale); border-top-color: var(--green-mid); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+    /* ── Vault Modal ─────────────────────────────────────────────────── */
+    #vault-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(30, 40, 20, 0.82);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #vault-overlay.hidden { display: none; }
+    .vault-modal {
+      background: var(--white); border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      padding: 36px 40px; width: 440px; max-width: 96vw;
+      animation: vaultIn 0.22s ease;
+    }
+    @keyframes vaultIn { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:none; } }
+    .vault-logo { font-size: 2rem; text-align: center; margin-bottom: 6px; }
+    .vault-title { font-size: 1.25rem; font-weight: 700; color: var(--green-dark); text-align: center; margin-bottom: 4px; }
+    .vault-subtitle { font-size: 0.85rem; color: var(--gray-text); text-align: center; margin-bottom: 24px; }
+    .vault-section { display: none; }
+    .vault-section.active { display: block; }
+    .vault-field { margin-bottom: 14px; }
+    .vault-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .vault-field input[type=password],
+    .vault-field input[type=text] {
+      width: 100%; padding: 10px 13px; border: 1.5px solid var(--gray-mid);
+      border-radius: 8px; font-size: 0.92rem; outline: none; transition: border-color 150ms;
+    }
+    .vault-field input:focus { border-color: var(--green-mid); }
+    .vault-field select {
+      width: 100%; padding: 10px 13px; border: 1.5px solid var(--gray-mid);
+      border-radius: 8px; font-size: 0.92rem; background: white; outline: none;
+    }
+    .vault-btn {
+      width: 100%; padding: 12px; border: none; border-radius: 9px;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 6px; transition: background 150ms;
+    }
+    .vault-btn-primary { background: var(--green-mid); color: #fff; }
+    .vault-btn-primary:hover { background: var(--green-dark); }
+    .vault-btn-secondary { background: var(--gray-light); color: var(--green-dark); border: 1px solid var(--gray-mid); margin-top: 10px; }
+    .vault-btn-secondary:hover { background: var(--green-pale); }
+    .vault-btn-forge { background: #1a73e8; color: #fff; }
+    .vault-btn-forge:hover { background: #1558b0; }
+    .vault-error { color: #c0392b; font-size: 0.84rem; margin-top: 8px; min-height: 18px; }
+    .vault-forge-badge {
+      display: flex; align-items: center; gap: 10px;
+      background: #e8f4fd; border: 1.5px solid #90caf9;
+      border-radius: 10px; padding: 12px 15px; margin-bottom: 18px;
+    }
+    .vault-forge-badge .badge-icon { font-size: 1.4rem; }
+    .vault-forge-badge .badge-text { font-size: 0.84rem; color: #1a5276; line-height: 1.5; }
+    .vault-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+    .vault-divider hr { flex: 1; border: none; border-top: 1px solid var(--gray-mid); }
+    .vault-divider span { font-size: 0.78rem; color: var(--gray-text); white-space: nowrap; }
+    .vault-link { background: none; border: none; color: var(--gray-text); font-size: 0.8rem; cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 12px; }
+    .vault-link:hover { color: var(--green-mid); }
+    .vault-profile-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .vault-profile-btn {
+      border: 2px solid var(--gray-mid); border-radius: 9px; padding: 10px 6px;
+      background: var(--gray-light); cursor: pointer; text-align: center; transition: all 150ms;
+    }
+    .vault-profile-btn .pb-icon { font-size: 1.3rem; display: block; margin-bottom: 3px; }
+    .vault-profile-btn .pb-name { font-size: 0.78rem; font-weight: 700; color: var(--green-dark); }
+    .vault-profile-btn .pb-tag { font-size: 0.68rem; color: var(--gray-text); }
+    .vault-profile-btn.selected { border-color: var(--green-mid); background: #f0f8e8; }
+    .vault-profile-btn:hover { border-color: var(--green-light); }
+    .vault-spinner-wrap { text-align: center; padding: 30px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     VAULT STARTUP MODAL  (ADR-040 / Session 55)
+     Hidden by default; vaultInit() decides which section to show.
+═══════════════════════════════════════════════════════ -->
+<div id="vault-overlay" class="hidden">
+  <div class="vault-modal">
+    <div class="vault-logo">🔐</div>
+    <div class="vault-title">Canopy Seed Vault</div>
+    <div class="vault-subtitle" id="vault-subtitle">Securing your API keys</div>
+
+    <!-- Loading spinner shown while we check status -->
+    <div id="vault-section-loading" class="vault-section active">
+      <div class="vault-spinner-wrap">
+        <span class="spinner" style="width:28px;height:28px;border-width:3px;"></span>
+        <p style="margin-top:12px;color:var(--gray-text);font-size:0.85rem;">Checking vault status…</p>
+      </div>
+    </div>
+
+    <!-- Forge bypass — shown when Forge proxy has live keys -->
+    <div id="vault-section-forge" class="vault-section">
+      <div class="vault-forge-badge">
+        <span class="badge-icon">🔗</span>
+        <div class="badge-text">
+          <strong>Forge is connected.</strong><br>
+          API keys are being provided by your Forge vault. You can launch directly.
+        </div>
+      </div>
+      <button class="vault-btn vault-btn-forge" onclick="vaultForgeBypass()">
+        ⚡ Launch with Forge Keys
+      </button>
+      <div class="vault-divider"><hr><span>or use local vault instead</span><hr></div>
+      <button class="vault-btn vault-btn-secondary" id="forge-use-local-btn" onclick="vaultShowLocalFlow()">
+        🔒 Use Local Vault
+      </button>
+    </div>
+
+    <!-- Unlock — vault.enc exists, need password -->
+    <div id="vault-section-unlock" class="vault-section">
+      <div class="vault-field">
+        <label>Vault Password</label>
+        <input type="password" id="unlock-password" placeholder="Enter your vault password" autocomplete="current-password" />
+      </div>
+      <div class="vault-error" id="unlock-error"></div>
+      <button class="vault-btn vault-btn-primary" onclick="vaultUnlock()">🔓 Unlock Vault</button>
+      <div id="unlock-forge-bypass" style="display:none;">
+        <div class="vault-divider"><hr><span>or</span><hr></div>
+        <button class="vault-btn vault-btn-forge" onclick="vaultForgeBypass()">⚡ Use Forge Keys Instead</button>
+      </div>
+      <button class="vault-link" onclick="vaultShowReset()">Forgot password? Reset vault…</button>
+    </div>
+
+    <!-- Setup — first launch, no vault.enc -->
+    <div id="vault-section-setup" class="vault-section">
+      <p style="font-size:0.83rem;color:var(--gray-text);margin-bottom:16px;line-height:1.6;">
+        Create your local vault to securely store API keys. Enter the keys you have — you can leave others blank.
+      </p>
+
+      <!-- Profile picker -->
+      <label style="display:block;font-size:0.78rem;font-weight:600;color:var(--gray-text);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Workflow Profile</label>
+      <div class="vault-profile-grid">
+        <div class="vault-profile-btn selected" id="profile-btn-gemini" onclick="selectProfile('gemini')">
+          <span class="pb-icon">⚡</span>
+          <div class="pb-name">Gemini</div>
+          <div class="pb-tag">Default</div>
+        </div>
+        <div class="vault-profile-btn" id="profile-btn-claude" onclick="selectProfile('claude')">
+          <span class="pb-icon">🤖</span>
+          <div class="pb-name">Claude</div>
+          <div class="pb-tag">Untested</div>
+        </div>
+        <div class="vault-profile-btn" id="profile-btn-qwen" onclick="selectProfile('qwen')">
+          <span class="pb-icon">🐉</span>
+          <div class="pb-name">Qwen</div>
+          <div class="pb-tag">Untested</div>
+        </div>
+      </div>
+      <input type="hidden" id="setup-profile" value="gemini" />
+
+      <!-- API key fields (shown/hidden by profile) -->
+      <div class="vault-field" id="setup-field-google">
+        <label>Google API Key <span style="color:var(--green-mid)">★</span></label>
+        <input type="password" id="setup-google" placeholder="AIza…" autocomplete="off" />
+      </div>
+      <div class="vault-field" id="setup-field-anthropic">
+        <label>Anthropic API Key</label>
+        <input type="password" id="setup-anthropic" placeholder="sk-ant-…" autocomplete="off" />
+      </div>
+      <div class="vault-field" id="setup-field-qwen">
+        <label>Qwen / DashScope API Key</label>
+        <input type="password" id="setup-qwen" placeholder="sk-…" autocomplete="off" />
+      </div>
+      <div class="vault-field" id="setup-field-openai" style="display:none;">
+        <label>OpenAI API Key (optional)</label>
+        <input type="password" id="setup-openai" placeholder="sk-…" autocomplete="off" />
+      </div>
+
+      <div class="vault-field" style="margin-top:18px;">
+        <label>Vault Password</label>
+        <input type="password" id="setup-password" placeholder="Choose a strong password" autocomplete="new-password" />
+      </div>
+      <div class="vault-field">
+        <label>Confirm Password</label>
+        <input type="password" id="setup-password2" placeholder="Repeat password" autocomplete="new-password" />
+      </div>
+      <div class="vault-error" id="setup-error"></div>
+      <button class="vault-btn vault-btn-primary" onclick="vaultSetup()">🔒 Create Vault &amp; Launch</button>
+      <div id="setup-forge-bypass" style="display:none;">
+        <div class="vault-divider"><hr><span>or</span><hr></div>
+        <button class="vault-btn vault-btn-forge" onclick="vaultForgeBypass()">⚡ Use Forge Keys Instead</button>
+      </div>
+    </div>
+
+    <!-- Reset confirmation -->
+    <div id="vault-section-reset" class="vault-section">
+      <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+        <strong style="color:#856404;">⚠️ Delete vault?</strong>
+        <p style="font-size:0.84rem;color:#856404;margin-top:6px;line-height:1.5;">
+          This permanently removes the encrypted vault file from disk. Your API keys will be deleted and you'll need to set them up again.
+        </p>
+      </div>
+      <div class="vault-error" id="reset-error"></div>
+      <button class="vault-btn" style="background:#e74c3c;color:#fff;" onclick="vaultReset()">🗑️ Yes, Delete Vault</button>
+      <button class="vault-btn vault-btn-secondary" onclick="vaultShowLocalFlow()" style="margin-top:10px;">Cancel</button>
+    </div>
+
+  </div>
+</div>
+<!-- end vault modal -->
+
+  <div class="topbar">
+    <a href="/" class="topbar-home-btn" title="Back to main UI">← Home</a>
+    <span class="topbar-logo">🌳 Canopy DevHub</span>
+    <span class="topbar-sep">|</span>
+    <span class="topbar-project" id="topbar-project">Loading project…</span>
+    <span class="topbar-status status-ready" id="topbar-status">Ready</span>
+  </div>
+
+  <div class="layout">
+
+    <!-- Left: spec + log -->
+    <div class="left">
+
+      <div class="card spec-card" id="spec-card">
+        <div class="spec-header">
+          <span class="spec-icon">🌱</span>
+          <span class="spec-name" id="spec-name">Loading…</span>
+        </div>
+        <p class="spec-desc" id="spec-desc">Fetching project context…</p>
+        <div class="spec-grid">
+          <div class="spec-field">
+            <div class="spec-field-label">Target Users</div>
+            <div class="spec-field-value" id="sf-users">—</div>
+          </div>
+          <div class="spec-field">
+            <div class="spec-field-label">Research</div>
+            <div class="spec-field-value" id="sf-research">—</div>
+          </div>
+          <div class="spec-field full">
+            <div class="spec-field-label">Goals</div>
+            <div class="spec-field-value" id="sf-goals">—</div>
+          </div>
+          <div class="spec-field full">
+            <div class="spec-field-label">Architecture Notes</div>
+            <div class="spec-field-value" id="sf-arch">—</div>
+          </div>
+          <div class="spec-field full">
+            <div class="spec-field-label">Open Questions</div>
+            <div class="spec-field-value" id="sf-questions">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card log-card">
+        <div class="log-header">
+          <span id="log-spinner"></span>
+          <h3>Build Log</h3>
+        </div>
+        <div class="log-body" id="log-body">
+          <span class="log-empty">Waiting for build to start…</span>
+        </div>
+      </div>
+
+      <section id="test-results-section" style="display:none; margin-top:24px;">
+        <h3 style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:8px;">Test Results</h3>
+        <div id="test-summary-bar" style="font-size:13px; color:#94a3b8; margin-bottom:8px;"></div>
+        <div id="test-result-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+      </section>
+
+      <section id="fix-results-section" style="display:none; margin-top:24px;">
+        <h3 style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:8px;">Auto-Fix Results</h3>
+        <div id="fix-result-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+      </section>
+
+      <section id="giant-brain-section" style="display:none; margin-top:24px;">
+        <h3 style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:8px;">Giant Brain Review</h3>
+        <pre id="giant-brain-text" style="font-size:12px; color:#cbd5e1; white-space:pre-wrap; background:#1e293b; padding:12px; border-radius:6px; line-height:1.6;"></pre>
+        <div style="margin-top:16px;">
+          <button id="export-changelog-btn"
+            style="padding:8px 16px; background:#334155; color:#e2e8f0; border:1px solid #475569;
+                   border-radius:6px; font-size:13px; cursor:pointer;">
+            Export Changelog
+          </button>
+          <span id="export-changelog-status" style="margin-left:12px; font-size:12px; color:#94a3b8;"></span>
+        </div>
+      </section>
+
+      <section id="calibration-section" style="margin-top:24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <h3 style="font-size:14px; font-weight:600; color:#e2e8f0; margin:0;">Complexity Judge Calibration</h3>
+          <div style="display:flex; gap:8px;">
+            <button id="run-calibration-btn"
+              style="padding:4px 10px; background:#1e293b; color:#94a3b8; border:1px solid #334155;
+                     border-radius:4px; font-size:12px; cursor:pointer;">
+              Run Benchmark
+            </button>
+            <button id="apply-calibration-btn" style="display:none;
+              padding:4px 10px; background:#0f4c2a; color:#4ade80; border:1px solid #166534;
+              border-radius:4px; font-size:12px; cursor:pointer;">
+              Apply Adjustments
+            </button>
+          </div>
+        </div>
+        <div id="calibration-status" style="font-size:12px; color:#64748b; margin-bottom:8px;"></div>
+        <div id="calibration-tier-bars" style="display:flex; flex-direction:column; gap:6px;"></div>
+        <div id="calibration-flag" style="display:none; margin-top:8px; padding:8px 12px;
+             background:#450a0a; border:1px solid #991b1b; border-radius:6px;
+             font-size:12px; color:#fca5a5;">
+          ⚠ Drift detected — model behaviour may have shifted. Consider applying adjustments.
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right: launch + agents -->
+    <div class="right">
+
+      <div class="card launch-card">
+        <h3>🚀 Launch Build</h3>
+        <button class="btn btn-primary" id="launch-btn" onclick="onLaunch()">Start Building</button>
+        <button class="btn btn-secondary" onclick="onExport()">📄 Export Spec</button>
+        <p class="launch-note" id="launch-note">
+          Dispatches your project spec to the agent pool.
+          Agents will plan, scaffold, and implement your project.
+        </p>
+        <div id="context-file-chip" class="context-chip" style="display:none">
+          <span>📄</span><span id="context-file-path">—</span>
+        </div>
+      </div>
+
+      <div class="card agents-card">
+        <h3>🤖 Agent Pool</h3>
+        <div class="agent-list" id="agent-list">
+          <p class="no-agents" id="no-agents-msg">
+            No agents connected.<br>
+            Agents appear here once they register with the server.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+const API = 'http://localhost:7822';
+let ctx = {};
+let sessionId = null;
+let exportedPath = null;
+let es = null;
+
+function baseName(path) {
+  return path ? path.split(/[\\/]/).pop() : path;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  // Get session_id from URL param or sessionStorage
+  const params = new URLSearchParams(location.search);
+  sessionId = params.get('session_id') || sessionStorage.getItem('canopy_session_id');
+
+  await loadContext();
+  await loadAgents();
+  connectSSE();
+
+  // Load cached debug state in case SSE fired before page was open
+  try {
+    const dbgRes = await fetch(`${API}/api/hub/debug_state`);
+    if (dbgRes.ok) {
+      const dbgData = await dbgRes.json();
+      if (dbgData && dbgData.debug_state) {
+        showDebugStatePanel(dbgData.debug_state);
+      }
+    }
+  } catch (_) {}
+
+  // Show context file path if passed
+  const filePath = params.get('export_path');
+  if (filePath) {
+    document.getElementById('context-file-chip').style.display = 'flex';
+    // Show only the last 2 path segments to avoid wrapping; full path in title tooltip
+    const parts = filePath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const shortPath = parts.length > 2 ? '…/' + parts.slice(-2).join('/') : filePath;
+    const el = document.getElementById('context-file-path');
+    el.textContent = shortPath;
+    el.title = filePath;
+    exportedPath = filePath;
+  }
+}
+
+// ── Load project context ──────────────────────────────────────────────────────
+async function loadContext() {
+  try {
+    const url = sessionId
+      ? `${API}/api/canopy/session/context?session_id=${encodeURIComponent(sessionId)}`
+      : `${API}/api/canopy/session/context`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Context fetch failed');
+    const data = await res.json();
+    ctx = data.context || data || {};
+    renderContext();
+  } catch (e) {
+    addLog('warn', `Could not load project context: ${e.message}`);
+  }
+}
+
+function renderContext() {
+  const name = ctx.name || ctx.project_name || 'Unnamed Project';
+  const desc = ctx.description || ctx.conversation_summary || ctx.goal || 'No description available.';
+  const users = ctx.target_users || ctx.users || '—';
+  const goals = Array.isArray(ctx.goals) ? ctx.goals.join('\n• ') : (ctx.goals || '—');
+  const arch = Array.isArray(ctx.architecture_notes)
+    ? ctx.architecture_notes.join('\n• ')
+    : (ctx.architecture_notes || Array.isArray(ctx.tech_preferences)
+        ? (ctx.tech_preferences || []).join(', ')
+        : '—');
+  const questions = Array.isArray(ctx.open_questions) && ctx.open_questions.length
+    ? ctx.open_questions.join('\n• ')
+    : 'None';
+  const researchCount = (ctx.research_log || ctx.research || []).length;
+
+  document.getElementById('topbar-project').textContent = name;
+  document.getElementById('spec-name').textContent = `🌱 ${name}`;
+  document.getElementById('spec-desc').textContent = desc;
+  document.getElementById('sf-users').textContent = users;
+  document.getElementById('sf-research').textContent = `${researchCount} source${researchCount === 1 ? '' : 's'}`;
+  document.getElementById('sf-goals').textContent = goals ? `• ${goals}` : '—';
+  document.getElementById('sf-arch').textContent = arch ? `• ${arch}` : '—';
+  document.getElementById('sf-questions').textContent = questions !== 'None' ? `• ${questions}` : 'None';
+}
+
+// ── Load agents ───────────────────────────────────────────────────────────────
+async function loadAgents() {
+  try {
+    const res = await fetch(`${API}/api/devhub/agents`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const agents = Array.isArray(data) ? data : (data.agents || []);
+    renderAgents(agents);
+  } catch {
+    // agent list stays as "no agents" message
+  }
+}
+
+function renderAgents(agents) {
+  const list = document.getElementById('agent-list');
+  const noMsg = document.getElementById('no-agents-msg');
+
+  if (!agents.length) return;
+
+  noMsg && noMsg.remove();
+  list.innerHTML = '';
+  agents.forEach(a => {
+    const status = a.status || a.state || 'idle';
+    const isBusy = status === 'busy' || status === 'running';
+    const cls = isBusy ? 'busy' : 'active';
+    const statusLabel = isBusy ? status : 'ready';
+    const item = document.createElement('div');
+    item.className = `agent-item ${cls}`;
+    item.innerHTML = `
+      <div class="agent-dot"></div>
+      <div class="agent-name">${escHtml(a.name || a.id || 'Agent')}</div>
+      <div class="agent-status">${escHtml(statusLabel)}</div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+// ── Launch build ──────────────────────────────────────────────────────────────
+async function onLaunch() {
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Dispatching…';
+
+  updateTopbarStatus('building');
+  addLog('info', 'Dispatching project to agent pool…');
+
+  try {
+    // Try dispatching to the first available agent
+    const agentsRes = await fetch(`${API}/api/devhub/agents`);
+    const agentsData = agentsRes.ok ? await agentsRes.json() : {};
+    const agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
+
+    const projectName = ctx.name || ctx.project_name || 'New Project';
+    const description = [
+      ctx.description || ctx.conversation_summary || '',
+      ctx.goals?.length ? `Goals: ${ctx.goals.join(', ')}` : '',
+      ctx.constraints?.length ? `Constraints: ${ctx.constraints.join(', ')}` : '',
+    ].filter(Boolean).join('\n\n');
+
+    if (agents.length > 0) {
+      // Dispatch to manager or first agent
+      const target = agents.find(a => /manager|lead|coordinator/i.test(a.name || a.id)) || agents[0];
+      const res = await fetch(`${API}/api/devhub/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: target.id,
+          title: projectName,
+          description,
+          system_prompt: `You are building: ${projectName}. ${description}`,
+          context_files: exportedPath ? [exportedPath] : [],
+          constraints: (ctx.constraints || []).join(', '),
+          context: { project_context: ctx },
+        })
+      });
+      const result = res.ok ? await res.json() : null;
+      if (result) {
+        addLog('ok', `✓ Dispatched to ${target.name || target.id} (task: ${result.id || 'queued'})`);
+        addLog('info', 'Watching for agent activity…');
+        btn.innerHTML = '✅ Build Running';
+        btn.style.background = 'var(--green-dark)';
+        updateTopbarStatus('building');
+      } else {
+        throw new Error('Dispatch returned no task');
+      }
+    } else {
+      // No agents — save context and give instructions
+      addLog('warn', 'No agents registered. Context saved — agents can pick it up when started.');
+      addLog('ok', `✓ Project spec ready: ${projectName}`);
+      showNoAgentHelp();
+      btn.innerHTML = '⏳ Waiting for Agents';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    addLog('warn', `Dispatch error: ${e.message}`);
+    showNoAgentHelp();
+    btn.innerHTML = '⏳ Waiting for Agents';
+    btn.disabled = false;
+  }
+}
+
+function showNoAgentHelp() {
+  const note = document.getElementById('launch-note');
+  note.innerHTML = `
+    <strong style="color:var(--green-dark)">Project spec is ready.</strong><br>
+    Start your agent process to begin building, or use
+    <strong>Export Spec</strong> to share the spec with your team.<br>
+    <span style="color:var(--copper)">
+      No agents are currently registered with the server.
+    </span>
+  `;
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+async function onExport() {
+  try {
+    const res = await fetch(`${API}/api/canopy/session/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    const data = res.ok ? await res.json() : null;
+    if (data?.markdown_path) {
+      exportedPath = data.markdown_path;
+      document.getElementById('context-file-chip').style.display = 'flex';
+      document.getElementById('context-file-path').textContent = data.markdown_path;
+      addLog('ok', `✓ Exported: ${data.markdown_path}`);
+    }
+  } catch (e) {
+    addLog('warn', `Export failed: ${e.message}`);
+  }
+}
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+function connectSSE() {
+  if (es) es.close();
+  es = new EventSource(`${API}/api/devhub/events`);
+
+  const sseHandlers = {};
+  const onEvent = (type, fn) => {
+    sseHandlers[type] = fn;
+    es.addEventListener(type, e => {
+      try {
+        fn(JSON.parse(e.data));
+      } catch {}
+    });
+  };
+
+  es.addEventListener('build_started', e => {
+    try {
+      const data = JSON.parse(e.data);
+      window._currentSessionId = data.session_id || `session-${Date.now()}`;
+    } catch {}
+  });
+
+  onEvent('agent_status', d => {
+    addLog('info', `[${d.agent_id || 'agent'}] ${d.status || d.message || JSON.stringify(d)}`);
+    loadAgents();
+  });
+
+  onEvent('task_update', d => {
+    addLog('ok', `Task ${d.task_id || ''}: ${d.status || d.message || 'updated'}`);
+  });
+
+  onEvent('task_started', d => {
+    addLog('info', `🤖 ${d.agent_name || d.agent_id} is working on: ${d.description || 'task'}`);
+    updateTopbarStatus('building');
+  });
+
+  onEvent('task_done', d => {
+    addLog('ok', `✅ ${d.agent_name || d.agent_id} finished.`);
+    if (d.output) {
+      const preview = d.output.length > 600 ? d.output.slice(0, 600) + '…' : d.output;
+      addLog('output', preview);
+    }
+    updateTopbarStatus('done');
+    const btn = document.getElementById('launch-btn');
+    if (btn) {
+      btn.innerHTML = '✅ Build Complete';
+      btn.style.background = 'var(--green-dark)';
+      btn.disabled = false;
+    }
+  });
+
+  onEvent('task_error', d => {
+    addLog('warn', `❌ Task error: ${d.error || 'unknown error'}`);
+    updateTopbarStatus('idle');
+    const btn = document.getElementById('launch-btn');
+    if (btn) { btn.innerHTML = '🔁 Retry Build'; btn.disabled = false; }
+  });
+
+  onEvent('canopy_context_ready', d => {
+    if (d.context) { ctx = d.context; renderContext(); }
+  });
+
+  onEvent('swarm_started', d => {
+    const section = document.getElementById('test-results-section');
+    const bar = document.getElementById('test-summary-bar');
+    if (section) section.style.display = 'block';
+    if (bar) {
+      bar.style.color = '#94a3b8';
+      bar.textContent = `Running ${d.test_count || 0} tests…`;
+    }
+  });
+
+  onEvent('test_passed', d => {
+    const section = document.getElementById('test-results-section');
+    const list = document.getElementById('test-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      const duration = typeof d.duration === 'number' ? d.duration.toFixed(2) : '0.00';
+      row.style.cssText = 'font-size:12px; color:#4ade80;';
+      row.textContent = `✓ ${baseName(d.test_file)} (${duration}s)`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('test_failed', d => {
+    const section = document.getElementById('test-results-section');
+    const list = document.getElementById('test-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:12px; color:#f87171;';
+      row.textContent = `✗ ${baseName(d.test_file)} — ${d.summary || ''}`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('swarm_complete', d => {
+    const section = document.getElementById('test-results-section');
+    const bar = document.getElementById('test-summary-bar');
+    if (section) section.style.display = 'block';
+    if (bar) {
+      const duration = typeof d.duration === 'number' ? d.duration.toFixed(1) : '0.0';
+      bar.textContent = `${d.passed || 0}/${d.total || 0} tests passed in ${duration}s`;
+      bar.style.color = (d.failed || 0) > 0 ? '#f87171' : '#4ade80';
+    }
+  });
+
+  onEvent('fix_started', d => {
+    const section = document.getElementById('fix-results-section');
+    const list = document.getElementById('fix-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:12px; color:#94a3b8;';
+      row.textContent = `🔧 Fixing ${baseName(d.test_file)} (attempt ${d.attempt}/3)…`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('fix_succeeded', d => {
+    const section = document.getElementById('fix-results-section');
+    const list = document.getElementById('fix-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:12px; color:#4ade80;';
+      row.textContent = `✓ Fixed ${baseName(d.test_file)} on attempt ${d.attempt}`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('fix_failed', d => {
+    const section = document.getElementById('fix-results-section');
+    const list = document.getElementById('fix-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:12px; color:#fb923c;';
+      row.textContent = `✗ Attempt ${d.attempt} failed for ${baseName(d.test_file)}`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('fix_restored', d => {
+    const section = document.getElementById('fix-results-section');
+    const list = document.getElementById('fix-result-list');
+    if (section) section.style.display = 'block';
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:12px; color:#f87171;';
+      row.textContent = `↩ Restored original: ${baseName(d.test_file)} (unfixable after 3 attempts)`;
+      list.appendChild(row);
+    }
+  });
+
+  onEvent('giant_brain_complete', d => {
+    const section = document.getElementById('giant-brain-section');
+    const text = document.getElementById('giant-brain-text');
+    if (section) section.style.display = 'block';
+    if (text) text.textContent = d.review || '';
+  });
+
+  onEvent('build_complete', d => {
+    addLog('ok', `🏁 Build complete: ${d.tasks_done || 0} done, ${d.tasks_error || 0} errors`);
+    if ((d.tests_total || 0) > 0) {
+      addLog('info', `Tests: ${d.tests_passed || 0}/${d.tests_total || 0} passed · Fixes applied: ${d.fixes_applied || 0}`);
+    }
+    // Navigate to Canopy Hub where the built app lives with the manager chatbot
+    const params = new URLSearchParams(window.location.search);
+    const port = params.get('port') || '7822';
+    const hubBase = `http://localhost:${port}/hub`;
+    const hubUrl = d.export_dir
+      ? `${hubBase}?export_dir=${encodeURIComponent(d.export_dir)}&port=${port}`
+      : `${hubBase}?port=${port}`;
+    addLog('info', `Navigating to Canopy Hub…`);
+    setTimeout(() => { window.location.href = hubUrl; }, 1200);
+  });
+
+  // ── user_guided_debug_state — surface in DevHub + link to Hub ──────────────
+  onEvent('user_guided_debug_state', d => {
+    addLog('warn', `⚠️ Repair exhausted — ${d.tests_still_failing || 0} tests still failing after ${d.repair_rounds || 0} repair rounds.`);
+    showDebugStatePanel(d);
+  });
+
+  window._handleSSEMessage = function(e) {
+    try {
+      const payload = JSON.parse(e.data);
+      if (payload && payload.type && payload.data && sseHandlers[payload.type]) {
+        sseHandlers[payload.type](payload.data);
+      }
+    } catch {}
+  };
+  es.onmessage = window._handleSSEMessage;
+
+  es.onerror = () => {
+    es.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+const exportBtn = document.getElementById('export-changelog-btn');
+if (exportBtn) {
+  exportBtn.addEventListener('click', () => {
+    const status = document.getElementById('export-changelog-status');
+    if (!window._currentSessionId) {
+      window._currentSessionId = `session-${Date.now()}`;
+    }
+
+    fetch(`/api/devhub/changelog/export?session_id=${window._currentSessionId}`)
+      .then(r => r.json())
+      .then(d => {
+        status.textContent = `Saved: ${d.path}`;
+      })
+      .catch(() => {
+        status.textContent = 'Export failed.';
+      });
+  });
+}
+
+// ── Log helpers ───────────────────────────────────────────────────────────────
+function addLog(type, msg) {
+  const body = document.getElementById('log-body');
+  const empty = body.querySelector('.log-empty');
+  if (empty) empty.remove();
+
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${escHtml(msg)}</span>`;
+  body.appendChild(entry);
+  body.scrollTop = body.scrollHeight;
+}
+
+function updateTopbarStatus(state) {
+  const el = document.getElementById('topbar-status');
+  el.className = 'topbar-status';
+  if (state === 'building') { el.classList.add('status-building'); el.textContent = 'Building'; }
+  else if (state === 'done') { el.classList.add('status-done'); el.textContent = 'Done'; }
+  else { el.classList.add('status-ready'); el.textContent = 'Ready'; }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+init();
+</script>
+
+<div id="sse-debug-panel" style="display:none; position:fixed; bottom:0; left:0; right:0;
+     background:#0f172a; border-top:1px solid #334155; padding:12px 20px; z-index:999; max-height:220px; overflow-y:auto;">
+  <div style="font-size:11px; color:#64748b; margin-bottom:8px;">
+    SSE Debug Panel — press <kbd style="background:#1e293b;padding:1px 4px;border-radius:3px;">Ctrl+Shift+D</kbd> to toggle
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;" id="sse-debug-buttons"></div>
+  <pre id="sse-debug-log" style="font-size:11px; color:#94a3b8; margin:0; white-space:pre-wrap;"></pre>
+</div>
+
+<script>
+// SSE Debug Panel
+(function() {
+  const EVENTS = [
+    ["swarm_started",      {"export_dir": "exports/demo", "test_count": 3}],
+    ["test_passed",        {"test_file": "exports/demo/tests/test_api.py", "duration": 0.42}],
+    ["test_failed",        {"test_file": "exports/demo/tests/test_db.py", "summary": "Expected 200 got 500", "duration": 1.1}],
+    ["swarm_complete",     {"total": 3, "passed": 2, "failed": 1, "duration": 2.8}],
+    ["fix_started",        {"test_file": "exports/demo/tests/test_db.py", "attempt": 1}],
+    ["fix_succeeded",      {"test_file": "exports/demo/tests/test_db.py", "attempt": 1}],
+    ["giant_brain_complete", {"review": "No residual risks identified. All diffs are minimal and well-scoped."}],
+    ["build_complete",     {"project_name": "Demo", "tasks_done": 4, "tasks_error": 0, "export_dir": "exports/demo",
+                            "tests_total": 3, "tests_passed": 2, "tests_failed": 1,
+                            "fixes_applied": 1, "fixes_failed": 0, "giant_brain_review": "All good."}],
+  ];
+
+  const panel = document.getElementById('sse-debug-panel');
+  const log   = document.getElementById('sse-debug-log');
+  const btns  = document.getElementById('sse-debug-buttons');
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+
+  EVENTS.forEach(([type, payload]) => {
+    const btn = document.createElement('button');
+    btn.textContent = type;
+    btn.style.cssText = 'padding:3px 8px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;font-size:11px;cursor:pointer;';
+    btn.onclick = () => {
+      const fakeEvent = { data: JSON.stringify({type, data: payload}) };
+      window._handleSSEMessage && window._handleSSEMessage(fakeEvent);
+      log.textContent += `[fired] ${type}\n`;
+    };
+    btns.appendChild(btn);
+  });
+})();
+</script>
+
+<script>
+// ── Calibration Panel ─────────────────────────────────────────────────────
+
+function renderCalibrationHistory(data) {
+  const bars   = document.getElementById('calibration-tier-bars');
+  const flag   = document.getElementById('calibration-flag');
+  const status = document.getElementById('calibration-status');
+  bars.innerHTML = '';
+  flag.style.display = data.any_flagged ? 'block' : 'none';
+  status.textContent = data.runs.length
+    ? `Last ${data.runs.length} benchmark run(s)`
+    : 'No benchmark runs yet.';
+  data.runs.forEach(run => {
+    const color = run.flagged ? '#f87171' : run.drift_pct > 15 ? '#fb923c' : '#4ade80';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:12px;';
+    bar.innerHTML = `
+      <span style="width:72px; color:#94a3b8;">${run.tier}</span>
+      <div style="flex:1; background:#1e293b; border-radius:3px; height:6px; overflow:hidden;">
+        <div style="width:${Math.min(run.drift_pct, 100)}%; background:${color}; height:100%;"></div>
+      </div>
+      <span style="width:60px; color:${color}; text-align:right;">${run.drift_pct.toFixed(1)}% drift</span>`;
+    bars.appendChild(bar);
+  });
+}
+
+// Load history on page load
+fetch('/api/devhub/calibration/history?last_n=5')
+  .then(r => r.json())
+  .then(renderCalibrationHistory)
+  .catch(() => {
+    document.getElementById('calibration-status').textContent = 'History unavailable.';
+  });
+
+document.getElementById('run-calibration-btn').addEventListener('click', () => {
+  document.getElementById('calibration-status').textContent = 'Running benchmark…';
+  fetch('/api/devhub/calibration/run')
+    .then(r => r.json())
+    .then(data => {
+      window._lastCalibrationAdjustments = data.adjustments;
+      if (data.any_flagged) {
+        document.getElementById('apply-calibration-btn').style.display = 'inline-block';
+      }
+      renderCalibrationHistory({ runs: data.runs, any_flagged: data.any_flagged });
+    })
+    .catch(() => {
+      document.getElementById('calibration-status').textContent = 'Benchmark failed.';
+    });
+});
+
+document.getElementById('apply-calibration-btn').addEventListener('click', () => {
+  fetch('/api/devhub/calibration/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adjustments: window._lastCalibrationAdjustments || {} })
+  })
+  .then(r => r.json())
+  .then(() => {
+    document.getElementById('apply-calibration-btn').style.display = 'none';
+    document.getElementById('calibration-flag').style.display = 'none';
+    document.getElementById('calibration-status').textContent = 'Adjustments applied.';
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  VAULT STARTUP MODAL  (ADR-040 / Session 55)
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _vaultForgeAvailable = false;   // true if Forge has live keys
+let _vaultSetup          = false;   // true if vault.enc exists
+
+function _vaultShowSection(id) {
+  ['loading','forge','unlock','setup','reset'].forEach(s => {
+    document.getElementById(`vault-section-${s}`).classList.toggle('active', s === id);
+  });
+}
+
+function _vaultHide() {
+  document.getElementById('vault-overlay').classList.add('hidden');
+}
+
+async function vaultInit() {
+  // Always show the overlay while we check status
+  document.getElementById('vault-overlay').classList.remove('hidden');
+  _vaultShowSection('loading');
+
+  let status;
+  try {
+    const r = await fetch(`${API}/api/vault/status`);
+    status = await r.json();
+  } catch (_) {
+    // API not reachable yet — hide overlay and let user proceed (dev mode)
+    _vaultHide();
+    return;
+  }
+
+  _vaultForgeAvailable = !!status.forge_connected;
+  _vaultSetup          = !!status.setup;
+
+  // Already unlocked this session (e.g. page reload) — let through
+  if (status.unlocked) {
+    _vaultHide();
+    return;
+  }
+
+  // Forge is connected with live keys — offer bypass as primary
+  if (_vaultForgeAvailable) {
+    document.getElementById('vault-subtitle').textContent =
+      'Forge is connected — choose how to proceed';
+    _vaultShowSection('forge');
+    // Also pre-populate active profile from status
+    if (status.active_profile) selectProfile(status.active_profile);
+    return;
+  }
+
+  // No vault file yet — show setup
+  if (!_vaultSetup) {
+    document.getElementById('vault-subtitle').textContent =
+      'First launch — create your secure key vault';
+    _vaultShowSection('setup');
+    return;
+  }
+
+  // Vault exists but locked — show unlock
+  document.getElementById('vault-subtitle').textContent =
+    'Enter your vault password to launch';
+  _vaultShowSection('unlock');
+}
+
+function vaultShowLocalFlow() {
+  // Called from "Use Local Vault" button on the Forge bypass screen,
+  // or from "Cancel" on the reset screen
+  if (!_vaultSetup) {
+    document.getElementById('vault-subtitle').textContent =
+      'First launch — create your secure key vault';
+    // Show forge bypass option inside setup too
+    document.getElementById('setup-forge-bypass').style.display =
+      _vaultForgeAvailable ? 'block' : 'none';
+    _vaultShowSection('setup');
+  } else {
+    document.getElementById('vault-subtitle').textContent =
+      'Enter your vault password to launch';
+    document.getElementById('unlock-forge-bypass').style.display =
+      _vaultForgeAvailable ? 'block' : 'none';
+    _vaultShowSection('unlock');
+  }
+}
+
+function vaultShowReset() {
+  document.getElementById('vault-subtitle').textContent = 'Reset vault';
+  _vaultShowSection('reset');
+}
+
+// Profile selector (setup screen)
+function selectProfile(name) {
+  ['gemini','claude','qwen'].forEach(p => {
+    document.getElementById(`profile-btn-${p}`)
+      .classList.toggle('selected', p === name);
+  });
+  document.getElementById('setup-profile').value = name;
+  // Show/emphasise relevant key field
+  const emphGoogle    = (name === 'gemini');
+  const emphAnthropic = (name === 'claude');
+  const emphQwen      = (name === 'qwen');
+  document.getElementById('setup-field-google').style.order    = emphGoogle    ? '0' : '1';
+  document.getElementById('setup-field-anthropic').style.order = emphAnthropic ? '0' : '2';
+  document.getElementById('setup-field-qwen').style.order      = emphQwen      ? '0' : '3';
+}
+
+// Forge bypass — trust the Forge proxy's keys, skip local vault entirely
+async function vaultForgeBypass() {
+  _vaultHide();
+  window.location.href = '/';
+}
+
+// Unlock existing vault
+async function vaultUnlock() {
+  const pw  = document.getElementById('unlock-password').value;
+  const err = document.getElementById('unlock-error');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'Please enter your password.'; return; }
+
+  try {
+    const r = await fetch(`${API}/api/vault/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    const data = await r.json();
+    if (data.success) {
+      _vaultHide();
+      // Vault is unlocked — send user to main UI to start a conversation
+      window.location.href = '/';
+    } else {
+      err.textContent = data.error || 'Unlock failed — check your password.';
+    }
+  } catch (e) {
+    err.textContent = `Network error: ${e.message}`;
+  }
+}
+
+// Setup new vault
+async function vaultSetup() {
+  const pw1  = document.getElementById('setup-password').value;
+  const pw2  = document.getElementById('setup-password2').value;
+  const err  = document.getElementById('setup-error');
+  err.textContent = '';
+
+  if (!pw1) { err.textContent = 'Please choose a vault password.'; return; }
+  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; return; }
+  if (pw1.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
+
+  const profile = document.getElementById('setup-profile').value;
+  const keys = {};
+  const gKey = document.getElementById('setup-google').value.trim();
+  const aKey = document.getElementById('setup-anthropic').value.trim();
+  const qKey = document.getElementById('setup-qwen').value.trim();
+  const oKey = document.getElementById('setup-openai').value.trim();
+  if (gKey) keys.google_api_key    = gKey;
+  if (aKey) keys.anthropic_api_key = aKey;
+  if (qKey) keys.qwen_api_key      = qKey;
+  if (oKey) keys.openai_api_key    = oKey;
+
+  if (!Object.keys(keys).length) {
+    err.textContent = 'Enter at least one API key.'; return;
+  }
+
+  try {
+    const r = await fetch(`${API}/api/vault/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys, password: pw1, profile }),
+    });
+    const data = await r.json();
+    if (data.success) {
+      _vaultSetup = true;
+      _vaultHide();
+      // Redirect to main UI — DevHub is for managing existing projects
+      window.location.href = '/';
+    } else {
+      err.textContent = data.error || 'Setup failed.';
+    }
+  } catch (e) {
+    err.textContent = `Network error: ${e.message}`;
+  }
+}
+
+// Reset (delete) vault
+async function vaultReset() {
+  const err = document.getElementById('reset-error');
+  err.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/vault/reset`, { method: 'POST' });
+    const data = await r.json();
+    if (data.success) {
+      _vaultSetup = false;
+      document.getElementById('vault-subtitle').textContent =
+        'Vault deleted — create a new one';
+      _vaultShowSection('setup');
+    } else {
+      err.textContent = data.error || 'Reset failed.';
+    }
+  } catch (e) {
+    err.textContent = `Network error: ${e.message}`;
+  }
+}
+
+// Keyboard shortcut: Enter submits whichever form section is visible
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const overlay = document.getElementById('vault-overlay');
+  if (overlay.classList.contains('hidden')) return;
+  if (document.getElementById('vault-section-unlock').classList.contains('active')) vaultUnlock();
+  else if (document.getElementById('vault-section-setup').classList.contains('active')) vaultSetup();
+});
+
+// Kick off vault check on load
+vaultInit();
+
+// ── Canopy Hub Debug State Panel ──────────────────────────────────────────────
+function showDebugStatePanel(d) {
+  const API_BASE = 'http://localhost:' + (window._apiPort || '7822');
+  const panel = document.getElementById('debug-state-panel');
+  if (!panel) return;
+
+  const projectName = d.project_name || 'your project';
+  const failing = d.tests_still_failing || 0;
+  const passing = d.tests_passing || 0;
+  const rounds = d.repair_rounds || 0;
+  const exportDir = d.export_dir || '';
+
+  // Build repair history summary
+  let historyHtml = '';
+  if (d.repair_history && d.repair_history.length > 0) {
+    const items = d.repair_history.slice(-3).map(r => {
+      const before = r.before_failing || '?';
+      const after = r.after_failing || '?';
+      const delta = after < before ? `<span style="color:#4caf50">-${before-after}</span>` : `<span style="color:#ef5350">+${after-before}</span>`;
+      return `<div class="dsp-round">Round ${r.round || '?'}: ${before} failing → ${after} failing (${delta})</div>`;
+    }).join('');
+    historyHtml = `<div class="dsp-history">${items}</div>`;
+  }
+
+  document.getElementById('dsp-title').textContent = projectName;
+  document.getElementById('dsp-stats').innerHTML =
+    `<span class="dsp-fail">${failing} failing</span> &nbsp;·&nbsp; ${passing} passing &nbsp;·&nbsp; ${rounds} repair rounds`;
+  document.getElementById('dsp-message').textContent = d.message || '';
+  document.getElementById('dsp-history-wrap').innerHTML = historyHtml;
+
+  // Wire hub button
+  const hubBtn = document.getElementById('dsp-hub-btn');
+  if (hubBtn) {
+    hubBtn.onclick = () => {
+      const hubUrl = `${API_BASE}/hub?export_dir=${encodeURIComponent(exportDir)}`;
+      window.open(hubUrl, '_blank');
+    };
+  }
+
+  panel.style.display = 'block';
+  // Scroll panel into view
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100);
+}
+
+function dismissDebugPanel() {
+  const panel = document.getElementById('debug-state-panel');
+  if (panel) panel.style.display = 'none';
+}
+</script>
+
+<!-- ── Debug State Panel (shown when user_guided_debug_state fires) ── -->
+<div id="debug-state-panel" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:linear-gradient(135deg,#1a0a2e,#2d1a5e); border-top:2px solid rgba(150,100,220,.5);
+  padding:14px 20px; box-shadow:0 -4px 24px rgba(0,0,0,.4); color:#e8e0f5;
+  font-family:'Segoe UI',system-ui,sans-serif;">
+  <div style="display:flex;align-items:flex-start;gap:14px;max-width:1000px;margin:0 auto;flex-wrap:wrap;">
+    <div style="font-size:1.6rem;flex-shrink:0;line-height:1;">🧠</div>
+    <div style="flex:1;min-width:200px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap;">
+        <span style="font-size:.9rem;font-weight:700;color:#c8a0f0;">Guided Debug Required</span>
+        <span id="dsp-title" style="font-size:.82rem;opacity:.7;"></span>
+        <span id="dsp-stats" style="font-size:.75rem;opacity:.7;margin-left:auto;"></span>
+      </div>
+      <div id="dsp-message" style="font-size:.78rem;color:rgba(232,224,245,.65);margin-bottom:6px;"></div>
+      <div id="dsp-history-wrap"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;">
+      <button id="dsp-hub-btn" style="padding:7px 14px;border-radius:7px;border:none;cursor:pointer;
+        font-size:.8rem;background:linear-gradient(135deg,#7c3fce,#4a1a8a);color:#fff;font-weight:600;">
+        🌿 Open in Canopy Hub →
+      </button>
+      <button onclick="dismissDebugPanel()" style="padding:7px 10px;border-radius:7px;border:1px solid rgba(150,100,220,.3);
+        background:transparent;color:rgba(232,224,245,.6);cursor:pointer;font-size:.8rem;">Dismiss</button>
+    </div>
+  </div>
+</div>
+<style>
+  .dsp-fail { color:#ef5350; font-weight:700; }
+  .dsp-round { font-size:.72rem; color:rgba(232,224,245,.55); font-family:monospace; padding:1px 0; }
+  .dsp-history { margin-top:4px; }
+</style>
+</body>
+</html>

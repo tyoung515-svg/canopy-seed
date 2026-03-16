@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canopy Hub</title>
+  <style>
+    :root {
+      --gd: #2D5016; --gm: #4A7C23; --gl: #7CB342;
+      --gp: #C5E1A5; --cu: #B5651D; --cl: #D4845A;
+      --cr: #F7F3ED; --tx: #3D3A36; --tx2: #6B6560; --tx3: #9E9991;
+      --gbd: rgba(45,80,22,.18); --gbg: rgba(45,80,22,.05);
+      --shadow: rgba(45,80,22,.12);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; font-family:'Segoe UI',system-ui,sans-serif; color:var(--tx); background:var(--cr); }
+    body { display:flex; flex-direction:column; }
+
+    /* ── Vault unlock overlay ── */
+    .vault-overlay { position:fixed; inset:0; background:rgba(45,80,22,.55); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center; z-index:999; }
+    .vault-overlay.hidden { display:none; }
+    .vault-card { background:#fff; border-radius:14px; padding:32px 36px; width:340px;
+      box-shadow:0 8px 32px rgba(45,80,22,.18); display:flex; flex-direction:column; gap:16px; }
+    .vault-logo { font-size:2rem; text-align:center; }
+    .vault-title { font-size:1.05rem; font-weight:700; color:var(--gd); text-align:center; }
+    .vault-sub { font-size:.78rem; color:var(--tx3); text-align:center; }
+    .vault-card input { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--gbd);
+      font-size:.85rem; color:var(--tx); background:var(--cr); outline:none; transition:border-color .15s; }
+    .vault-card input:focus { border-color:var(--gm); }
+    .vault-unlock-btn { width:100%; padding:10px; border-radius:8px; border:none; cursor:pointer;
+      background:var(--gm); color:#fff; font-size:.88rem; font-weight:700; transition:background .15s; }
+    .vault-unlock-btn:hover { background:var(--gd); }
+    .vault-unlock-btn:disabled { opacity:.5; cursor:default; }
+    .vault-err { font-size:.75rem; color:#ef5350; text-align:center; min-height:1em; }
+
+    /* ── Topbar ── */
+    .topbar { background:var(--gd); color:#fff; padding:10px 20px;
+      display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .topbar-logo { font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .topbar-sep { opacity:.3; }
+    .topbar-name { font-size:.9rem; opacity:.8; flex:1; }
+    .topbar-status { font-size:.72rem; padding:3px 10px; border-radius:999px; font-weight:600;
+      background:rgba(124,179,66,.25); color:#c5e1a5; display:flex; align-items:center; gap:5px; }
+    .status-dot { width:6px; height:6px; border-radius:50%; background:#7CB342;
+      animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .topbar-devhub-link { font-size:.75rem; color:rgba(255,255,255,.55); text-decoration:none;
+      padding:3px 8px; border-radius:5px; border:1px solid rgba(255,255,255,.15); }
+    .topbar-devhub-link:hover { background:rgba(255,255,255,.1); color:#fff; }
+
+    /* ── Layout ── */
+    .layout { display:flex; flex:1; min-height:0; overflow:hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar { width:220px; flex-shrink:0; border-right:1px solid var(--gbd);
+      background:#fff; display:flex; flex-direction:column; overflow:hidden; }
+    .sidebar-hd { padding:12px 14px 8px; font-size:.65rem; text-transform:uppercase;
+      letter-spacing:.1em; color:var(--tx3); border-bottom:1px solid var(--gbd); }
+    .sidebar-apps { flex:1; overflow-y:auto; padding:6px 0; }
+    .app-row { display:flex; align-items:center; gap:10px; padding:9px 14px;
+      cursor:pointer; border-bottom:1px solid rgba(45,80,22,.05); transition:background .15s; }
+    .app-row:hover { background:var(--gbg); }
+    .app-row.sel { background:rgba(45,80,22,.09); border-left:2px solid var(--gm); padding-left:12px; }
+    .app-icon { font-size:1.2rem; flex-shrink:0; }
+    .app-info { flex:1; min-width:0; }
+    .app-name { font-size:.82rem; font-weight:600; color:var(--tx); white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; }
+    .app-meta { font-size:.65rem; color:var(--tx3); margin-top:1px; }
+    .app-badge-ok  { font-size:.7rem; color:var(--gl); flex-shrink:0; }
+    .app-badge-warn { font-size:.7rem; color:#f59e0b; flex-shrink:0; }
+    .app-badge-debug { font-size:.7rem; color:#a855f7; flex-shrink:0; }
+    .sidebar-new { padding:10px 14px; border-top:1px solid var(--gbd); }
+    .btn-new { width:100%; padding:7px; border-radius:7px; border:1px dashed var(--gbd);
+      background:transparent; color:var(--tx3); font-size:.75rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:5px; transition:all .15s; }
+    .btn-new:hover { border-color:var(--gm); color:var(--gm); background:var(--gbg); }
+
+    /* ── Main area ── */
+    .main { flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden; }
+
+    /* ── Debug Panel (shown when an app has debug state) ── */
+    .debug-panel { border-bottom:1px solid var(--gbd); background:#fff; flex-shrink:0; }
+    .debug-panel-hd { display:flex; align-items:center; gap:10px; padding:10px 16px 6px;
+      cursor:pointer; }
+    .debug-panel-title { font-size:.8rem; font-weight:700; color:#7c3aed; }
+    .debug-panel-toggle { margin-left:auto; font-size:.7rem; color:var(--tx3); }
+    .debug-panel-body { padding:0 16px 12px; }
+    .debug-fixes { display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
+    .debug-fix { display:flex; align-items:flex-start; gap:8px; padding:6px 10px;
+      border-radius:7px; background:rgba(124,58,237,.06); border:1px solid rgba(124,58,237,.14); }
+    .debug-fix-icon { width:16px; height:16px; border-radius:50%; border:1px solid rgba(124,58,237,.3);
+      display:flex; align-items:center; justify-content:center; font-size:.58rem; flex-shrink:0;
+      margin-top:2px; color:#7c3aed; }
+    .debug-fix-name { font-size:.75rem; color:var(--tx); font-weight:600; line-height:1.3; }
+    .debug-fix-code { font-size:.63rem; color:var(--tx3); font-family:monospace; margin-top:2px; }
+    .debug-fix-lines { font-size:.6rem; color:var(--gm); margin-top:2px; opacity:.8; }
+    .debug-footer { font-size:.7rem; color:var(--tx3); display:flex; align-items:center;
+      gap:8px; padding-top:8px; border-top:1px solid rgba(45,80,22,.1); flex-wrap:wrap; }
+    .debug-tests-ok { color:var(--gm); font-weight:700; }
+    .debug-no-state { padding:10px 16px; font-size:.78rem; color:var(--tx3); font-style:italic; }
+    .repair-history { margin-bottom:8px; }
+    .repair-round { font-size:.72rem; color:var(--tx3); font-family:monospace; padding:2px 0; }
+    .repair-improved { color:#4caf50; }
+    .repair-regressed { color:#ef5350; }
+    .repair-stalled   { color:#f59e0b; }
+    .repair-fail-msg  { font-size:.73rem; color:#ef5350; padding:4px 8px; background:rgba(239,83,80,.07);
+      border-radius:5px; border:1px solid rgba(239,83,80,.15); margin-bottom:8px; font-family:monospace; }
+
+    /* ── Chat area ── */
+    .chat-area { flex:1; display:flex; flex-direction:column; min-height:0; }
+    .chat-hd { padding:10px 16px; border-bottom:1px solid var(--gbd); background:#fff;
+      display:flex; align-items:center; gap:10px; flex-shrink:0; }
+    .mgr-av { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--gm),var(--gd));
+      display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; }
+    .mgr-name { font-size:.88rem; font-weight:700; color:var(--tx); }
+    .mgr-role { font-size:.66rem; color:var(--tx3); }
+    .mgr-online { margin-left:auto; display:flex; align-items:center; gap:4px;
+      font-size:.68rem; color:var(--gm); }
+
+    .chat-msgs { flex:1; overflow-y:auto; padding:14px 16px; display:flex;
+      flex-direction:column; gap:10px; }
+    .brow { display:flex; align-items:flex-end; gap:8px; }
+    .brow.user { flex-direction:row-reverse; }
+    .bav { width:26px; height:26px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:.75rem; flex-shrink:0; }
+    .bav.mgr { background:linear-gradient(135deg,var(--gm),var(--gd)); }
+    .bav.user { background:rgba(45,80,22,.15); border:1px solid var(--gbd); }
+    .bub { padding:8px 12px; border-radius:10px; font-size:.82rem; line-height:1.5;
+      max-width:75%; }
+    .bub.mgr { background:#fff; border:1px solid var(--gbd); color:var(--tx); }
+    .bub.user { background:rgba(45,80,22,.12); border:1px solid var(--gbd); color:var(--tx); }
+
+    .typing-row { display:flex; align-items:center; gap:8px; padding:0 4px; }
+    .typing-dots span { display:inline-block; width:6px; height:6px; border-radius:50%;
+      background:var(--gm); animation:blink 1.2s infinite; margin:0 1px; }
+    .typing-dots span:nth-child(2) { animation-delay:.2s; }
+    .typing-dots span:nth-child(3) { animation-delay:.4s; }
+    @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+    /* Progress card in chat */
+    .build-card { padding:10px 14px; border-radius:10px; border:1px solid var(--gbd);
+      background:var(--gbg); max-width:85%; font-size:.8rem; }
+    .build-card-title { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+      color:var(--tx3); margin-bottom:8px; }
+    .build-line { font-family:monospace; font-size:.73rem; color:var(--gm); padding:1px 0;
+      animation:fadeIn .3s ease forwards; opacity:0; }
+    .build-line:nth-child(2){animation-delay:.1s}
+    .build-line:nth-child(3){animation-delay:.2s}
+    .build-line:nth-child(4){animation-delay:.35s}
+    .build-line:nth-child(5){animation-delay:.5s}
+    @keyframes fadeIn { to{opacity:1} }
+
+    /* Action buttons */
+    .action-row { padding:8px 12px; border-top:1px solid var(--gbd); background:#fff;
+      display:flex; gap:8px; flex-wrap:wrap; flex-shrink:0; }
+    .btn-hub-fix { padding:7px 14px; border-radius:7px; border:none; cursor:pointer;
+      font-size:.8rem; background:var(--gm); color:#fff; font-weight:600;
+      display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+    .btn-hub-fix:hover { background:var(--gd); }
+    .btn-hub-expand { padding:7px 14px; border-radius:7px; border:none; cursor:pointer;
+      font-size:.8rem; background:linear-gradient(135deg,var(--gm),var(--gd)); color:#fff;
+      font-weight:600; display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+    .btn-hub-expand:hover { transform:translateY(-1px); box-shadow:0 3px 10px var(--shadow); }
+    .btn-hub-sec { padding:7px 12px; border-radius:7px; border:1px solid var(--gbd);
+      background:transparent; color:var(--tx2); cursor:pointer; font-size:.8rem;
+      transition:all .15s; }
+    .btn-hub-sec:hover { border-color:var(--gm); color:var(--gm); }
+
+    /* Composer */
+    .composer { padding:8px 12px; border-top:1px solid var(--gbd); background:#fff;
+      display:flex; gap:8px; align-items:flex-end; flex-shrink:0; }
+    .composer textarea { flex:1; padding:8px 10px; border-radius:8px;
+      border:1px solid var(--gbd); font-size:.82rem; resize:none; font-family:inherit;
+      color:var(--tx); background:var(--cr); line-height:1.4; outline:none;
+      transition:border-color .15s; max-height:100px; }
+    .composer textarea:focus { border-color:var(--gm); }
+    .send-btn { padding:8px 12px; border-radius:8px; border:none; cursor:pointer;
+      background:var(--gm); color:#fff; font-size:.82rem; font-weight:600;
+      display:inline-flex; align-items:center; gap:4px; transition:all .15s; }
+    .send-btn:hover { background:var(--gd); }
+    .send-btn:disabled { opacity:.4; cursor:default; }
+
+    /* Spinner */
+    .spin { width:14px; height:14px; border:2px solid rgba(45,80,22,.2);
+      border-top-color:var(--gm); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* No apps state */
+    .no-apps-msg { padding:30px; text-align:center; color:var(--tx3); font-size:.82rem; }
+    .no-debug-selected { display:flex; flex:1; align-items:center; justify-content:center;
+      color:var(--tx3); font-size:.85rem; flex-direction:column; gap:8px; padding:30px; }
+
+    /* ── Update Keys modal ── */
+    .keys-modal-overlay { position:fixed; inset:0; background:rgba(45,80,22,.55);
+      backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;
+      z-index:999; }
+    .keys-modal-overlay.hidden { display:none; }
+    .keys-modal-card { background:#fff; border-radius:14px; padding:28px 32px; width:360px;
+      box-shadow:0 8px 32px rgba(45,80,22,.18); display:flex; flex-direction:column; gap:14px; }
+    .keys-modal-card h3 { font-size:1rem; font-weight:700; color:var(--gd); margin:0; }
+    .keys-modal-card p  { font-size:.78rem; color:var(--tx3); margin:0; line-height:1.45; }
+    .keys-modal-card label { font-size:.78rem; font-weight:600; color:var(--tx2); }
+    .keys-modal-card input { width:100%; padding:9px 12px; border-radius:8px;
+      border:1px solid var(--gbd); font-size:.82rem; color:var(--tx);
+      background:var(--cr); outline:none; transition:border-color .15s; }
+    .keys-modal-card input:focus { border-color:var(--gm); }
+    .keys-modal-card .keys-err { font-size:.75rem; color:#ef5350; min-height:1em; }
+    .keys-modal-card .keys-ok  { font-size:.75rem; color:var(--gm); min-height:1em; font-weight:600; }
+    .keys-modal-btns { display:flex; gap:8px; }
+    .keys-modal-btns button { flex:1; padding:9px; border-radius:8px; border:none;
+      font-size:.85rem; font-weight:700; cursor:pointer; transition:background .15s; }
+    .keys-modal-btns .btn-save { background:var(--gm); color:#fff; }
+    .keys-modal-btns .btn-save:hover { background:var(--gd); }
+    .keys-modal-btns .btn-save:disabled { opacity:.5; cursor:default; }
+    .keys-modal-btns .btn-cancel { background:rgba(45,80,22,.08); color:var(--gd); }
+    .keys-modal-btns .btn-cancel:hover { background:rgba(45,80,22,.15); }
+    .topbar-keys-btn { font-size:.78rem; color:rgba(255,255,255,.65); background:none;
+      border:1px solid rgba(255,255,255,.2); border-radius:5px; padding:3px 9px;
+      cursor:pointer; transition:all .15s; margin-left:6px; }
+    .topbar-keys-btn:hover { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.4); }
+  </style>
+</head>
+<body>
+
+<!-- Vault unlock overlay — shown if vault is set up but not yet unlocked -->
+<div class="vault-overlay hidden" id="vault-overlay">
+  <div class="vault-card">
+    <div class="vault-logo">🔒</div>
+    <div class="vault-title">Unlock your vault</div>
+    <div class="vault-sub">Enter your vault password to load your API keys and start the Hub.</div>
+    <input type="password" id="vault-pw" placeholder="Vault password…"
+      onkeydown="if(event.key==='Enter')unlockVault()" />
+    <div class="vault-err" id="vault-err"></div>
+    <button class="vault-unlock-btn" id="vault-unlock-btn" onclick="unlockVault()">Unlock →</button>
+  </div>
+</div>
+
+<!-- Update Keys modal -->
+<div class="keys-modal-overlay hidden" id="keys-modal">
+  <div class="keys-modal-card">
+    <h3>🔑 Update API Keys</h3>
+    <p>Enter your vault password to verify, then paste your new key. Leave a key field blank to keep the existing value.</p>
+    <div>
+      <label>Vault password</label>
+      <input type="password" id="keys-modal-pw" placeholder="Your vault password…" />
+    </div>
+    <div>
+      <label>Google API Key</label>
+      <input type="text" id="keys-modal-google" placeholder="AIza… (leave blank to keep current)" autocomplete="off" />
+    </div>
+    <div>
+      <label>Anthropic API Key (optional)</label>
+      <input type="text" id="keys-modal-anthropic" placeholder="sk-ant-… (leave blank to keep current)" autocomplete="off" />
+    </div>
+    <div class="keys-err hidden" id="keys-modal-err"></div>
+    <div class="keys-ok hidden" id="keys-modal-ok"></div>
+    <div class="keys-modal-btns">
+      <button class="btn-cancel" onclick="closeKeysModal()">Cancel</button>
+      <button class="btn-save" id="keys-modal-save-btn" onclick="saveKeys()">Save &amp; Apply →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-logo">🌿 Canopy Hub</div>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-name">App Manager &amp; Expansion Console</span>
+  <div class="topbar-status"><div class="status-dot"></div>Active</div>
+  <button class="topbar-keys-btn" onclick="openKeysModal()" title="Update API keys">🔑 Keys</button>
+  <a href="/devhub" class="topbar-devhub-link">← DevHub</a>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar: app list -->
+  <div class="sidebar">
+    <div class="sidebar-hd">Your Apps</div>
+    <div class="sidebar-apps" id="sidebar-apps">
+      <div class="no-apps-msg">Loading…</div>
+    </div>
+    <div class="sidebar-new">
+      <button class="btn-new" onclick="goToSeed()">🌱 Plant a new seed</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="main-area">
+    <div class="no-debug-selected" id="no-selection">
+      <div style="font-size:2rem">🌿</div>
+      <div>Select an app to manage it</div>
+      <div style="font-size:.75rem;opacity:.6;">or plant a new seed from the sidebar</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:' + (new URLSearchParams(window.location.search).get('port') || '7822');
+let selectedApp = null;
+let typingTimer = null;
+let chatHistory = [];
+let _runningApps = {};   // app_dir -> { url, port }
+let _pendingFix  = null; // fix_files array waiting to be applied
+
+// ── Vault unlock ─────────────────────────────────────────────────────────────
+async function checkVault() {
+  try {
+    const r = await fetch(`${API}/api/vault/status`);
+    const d = await r.json();
+    // Show overlay if vault exists but is not yet unlocked this session
+    if (d.setup && !d.unlocked && !d.forge_connected) {
+      document.getElementById('vault-overlay').classList.remove('hidden');
+      setTimeout(() => document.getElementById('vault-pw').focus(), 100);
+      return false; // signal: not ready yet
+    }
+  } catch(e) {
+    // Can't reach server — let init proceed so the "Canopy not running" error shows normally
+  }
+  return true; // vault unlocked (or no vault) — proceed
+}
+
+async function unlockVault() {
+  const pw  = document.getElementById('vault-pw').value;
+  const err = document.getElementById('vault-err');
+  const btn = document.getElementById('vault-unlock-btn');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'Please enter your password.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Unlocking…';
+  try {
+    const r = await fetch(`${API}/api/vault/unlock`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password: pw}),
+    });
+    const d = await r.json();
+    if (!d.success) {
+      err.textContent = d.error || 'Wrong password — try again.';
+      btn.disabled = false;
+      btn.textContent = 'Unlock →';
+      document.getElementById('vault-pw').select();
+      return;
+    }
+    // Keys are now live in settings — hide overlay and continue
+    document.getElementById('vault-overlay').classList.add('hidden');
+    await continueInit();
+  } catch(e) {
+    err.textContent = 'Could not reach Canopy. Is it running?';
+    btn.disabled = false;
+    btn.textContent = 'Unlock →';
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const ready = await checkVault();
+  if (!ready) return; // overlay is showing — continueInit() picks up after unlock
+  await continueInit();
+}
+
+async function continueInit() {
+  // Load which apps are already running (e.g. after a page refresh)
+  try {
+    const r = await fetch(`${API}/api/hub/running`);
+    const d = await r.json();
+    _runningApps = d.running || {};
+  } catch(e) {}
+
+  await loadApps();
+
+  // Auto-select app if export_dir was passed in URL
+  const params = new URLSearchParams(window.location.search);
+  const exportDir = params.get('export_dir');
+  if (exportDir) {
+    await loadDebugState(exportDir);
+  }
+}
+
+// ── App list ──────────────────────────────────────────────────────────────────
+async function loadApps() {
+  const container = document.getElementById('sidebar-apps');
+  try {
+    const r = await fetch(`${API}/api/hub/apps`);
+    const d = await r.json();
+    const apps = d.apps || [];
+    if (apps.length === 0) {
+      container.innerHTML = '<div class="no-apps-msg">No apps built yet.<br>Plant a seed to get started.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    apps.forEach(app => {
+      const row = document.createElement('div');
+      row.className = 'app-row';
+      row.dataset.dir = app.dir;
+      row.dataset.exportPath = app.export_path;
+
+      // Icon based on name heuristic
+      const icons = {'battery':'⚡','inventory':'📦','tracker':'📋','analyzer':'📊','expense':'💰','habit':'🎯','csv':'📄'};
+      let icon = '📂';
+      const nameLower = (app.name||'').toLowerCase();
+      for (const [k,v] of Object.entries(icons)) { if (nameLower.includes(k)) { icon=v; break; } }
+
+      const isRunning = !!_runningApps[app.dir];
+      const badge = isRunning
+        ? `<span class="app-badge-ok" style="background:#00c853;color:#fff;padding:2px 7px;border-radius:10px;font-size:.7rem;">▶ live</span>`
+        : `<span class="app-badge-ok">✓</span>`;
+      row.innerHTML = `
+        <div class="app-icon">${icon}</div>
+        <div class="app-info">
+          <div class="app-name">${app.name || app.dir}</div>
+          <div class="app-meta">${app.source_files} files · ${app.test_files} tests</div>
+        </div>
+        ${badge}`;
+      row.onclick = () => selectApp(app, row);
+      container.appendChild(row);
+    });
+  } catch(e) {
+    container.innerHTML = `<div class="no-apps-msg" style="color:#ef5350;">Could not load apps.<br>Is Canopy running?</div>`;
+  }
+}
+
+function selectApp(app, rowEl) {
+  document.querySelectorAll('.app-row').forEach(r => r.classList.remove('sel'));
+  rowEl.classList.add('sel');
+  selectedApp = app;
+  openAppHub(app);
+}
+
+// ── App Hub Main View ─────────────────────────────────────────────────────────
+async function openAppHub(app) {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `
+    <div class="debug-panel" id="debug-panel">
+      <div class="debug-panel-hd" onclick="toggleDebugPanel()">
+        <span style="font-size:1rem">🧠</span>
+        <span class="debug-panel-title">Last Debug Session</span>
+        <span class="debug-panel-toggle" id="dp-toggle">▾ Show</span>
+      </div>
+      <div class="debug-panel-body" id="dp-body" style="display:none;">
+        <div id="dp-content"><div class="debug-no-state">Loading debug session…</div></div>
+      </div>
+    </div>
+    <div class="chat-area">
+      <div class="chat-hd">
+        <div class="mgr-av">🌿</div>
+        <div><div class="mgr-name">Canopy Manager</div><div class="mgr-role">Maintains &amp; expands your apps</div></div>
+        <div class="mgr-online"><div class="status-dot"></div>Active</div>
+      </div>
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div id="typing-row" class="typing-row" style="display:none;padding:4px 16px;">
+        <div class="bav mgr" style="width:22px;height:22px;font-size:.65rem;">🌿</div>
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="action-row" id="action-row"></div>
+      <div class="composer">
+        <textarea id="chat-input" rows="1" placeholder="Ask Canopy Manager anything about this app…"
+          onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendChat()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send
+        </button>
+      </div>
+    </div>`;
+
+  // Load debug state and start manager greeting
+  chatHistory = [];
+  const ds = await loadDebugState(app.export_path || app.dir);
+  startManagerGreeting(app, ds);
+}
+
+function toggleDebugPanel() {
+  const body = document.getElementById('dp-body');
+  const tog = document.getElementById('dp-toggle');
+  if (body) {
+    const visible = body.style.display !== 'none';
+    body.style.display = visible ? 'none' : 'block';
+    if (tog) tog.textContent = visible ? '▾ Show' : '▴ Hide';
+  }
+}
+
+async function loadDebugState(exportPathOrDir) {
+  const content = document.getElementById('dp-content');
+  try {
+    const r = await fetch(`${API}/api/hub/debug_state`);
+    const d = await r.json();
+    const ds = d.debug_state;
+
+    if (!content) return ds;
+
+    if (!ds) {
+      content.innerHTML = '<div class="debug-no-state">No debug session recorded yet for this app. Canopy Manager is watching.</div>';
+      return null;
+    }
+
+    // Render repair history
+    let histHtml = '';
+    if (ds.repair_history && ds.repair_history.length > 0) {
+      histHtml = '<div class="repair-history">' +
+        ds.repair_history.map(r => {
+          const before = r.before_failing ?? '?';
+          const after = r.after_failing ?? '?';
+          const diff = (typeof before === 'number' && typeof after === 'number') ? after - before : null;
+          const cls = diff === null ? '' : diff < 0 ? 'repair-improved' : diff > 0 ? 'repair-regressed' : 'repair-stalled';
+          const arrow = diff === null ? '' : diff < 0 ? ` → ✓ -${Math.abs(diff)}` : diff > 0 ? ` → ✗ +${diff}` : ' → ∅ stalled';
+          return `<div class="repair-round"><span class="${cls}">Round ${r.round||'?'}: ${before} failing${arrow}</span></div>`;
+        }).join('') +
+        '</div>';
+    }
+
+    // Fail message
+    const msgHtml = ds.message ?
+      `<div class="repair-fail-msg">${ds.message}</div>` : '';
+
+    const passing = ds.tests_passing || 0;
+    const failing = ds.tests_still_failing || 0;
+    const total = passing + failing;
+
+    content.innerHTML = `
+      ${msgHtml}
+      ${histHtml}
+      <div class="debug-footer">
+        <span class="${failing > 0 ? '' : 'debug-tests-ok'}">${failing > 0 ? '⚠ '+failing+' still failing' : '✓ All passing'}</span>
+        <span>·</span><span>${passing}/${total} tests pass</span>
+        <span>·</span><span>${ds.repair_rounds || 0} repair rounds</span>
+      </div>`;
+
+    // Auto-expand panel if there are failures
+    if (failing > 0) {
+      const body = document.getElementById('dp-body');
+      const tog = document.getElementById('dp-toggle');
+      if (body) body.style.display = 'block';
+      if (tog) tog.textContent = '▴ Hide';
+    }
+    return ds;
+  } catch(e) {
+    if (content) content.innerHTML = '<div class="debug-no-state" style="color:#ef5350;">Could not fetch debug state. Is Canopy running?</div>';
+    return null;
+  }
+}
+
+// ── Manager greeting ──────────────────────────────────────────────────────────
+function startManagerGreeting(app, debugState) {
+  const msgs = document.getElementById('chat-msgs');
+  if (!msgs) return;
+  const appName = app.name || app.dir;
+
+  if (debugState && debugState.tests_still_failing > 0) {
+    // Debug state present — report on it first
+    const failing = debugState.tests_still_failing;
+    const rounds = debugState.repair_rounds;
+    mgrSay(`I've reviewed <strong>${appName}</strong>. The automated repair loop ran ${rounds} round${rounds!==1?'s':''} and still has ${failing} test${failing!==1?'s':''} failing. This usually means there's a contract-level design issue I can help you work through.`, () => {
+      mgrSay(`I can kick off a targeted fix — or if you're ready to move forward, <strong>Phase 2</strong> expansion is waiting in the pipeline. What would you like to do?`, () => {
+        showActions([
+          {label:'🔧 Help fix the failing tests', fn:'hubRepairPrompt'},
+          {label:'🌱 Start Phase 2 expansion', fn:'hubExpandPrompt'},
+          {label:'Tell me more first', fn:'hubExplainIssue'},
+        ]);
+      });
+    });
+  } else {
+    // Clean state — lead with Launch
+    const alreadyRunning = !!_runningApps[app.dir];
+    mgrSay(`<strong>${appName}</strong> is healthy — all tests passing. Ready to go!`, () => {
+      if (alreadyRunning) {
+        mgrSay(`It's already running. Click below to open it.`, () => {
+          showActions([
+            {label:'🚀 Open App', fn:'hubOpenRunning', primary:true},
+            {label:'⏹ Stop App', fn:'hubStopApp'},
+            {label:'🌱 Expand it', fn:'hubExpandPrompt'},
+          ]);
+        });
+      } else {
+        mgrSay(`Hit <strong>Launch App</strong> to start it up — I'll open it right in your browser. No setup needed.`, () => {
+          showActions([
+            {label:'🚀 Launch App', fn:'hubLaunchApp', primary:true},
+            {label:'🌱 Expand it', fn:'hubExpandPrompt'},
+            {label:'Show me what was built', fn:'hubShowBuild'},
+          ]);
+        });
+      }
+    });
+  }
+}
+
+// ── Manager speech ────────────────────────────────────────────────────────────
+function mgrSay(html, cb, delay) {
+  const tr = document.getElementById('typing-row');
+  if (tr) tr.style.display = 'flex';
+  scrollChat();
+  setTimeout(() => {
+    if (tr) tr.style.display = 'none';
+    addMsg('mgr', html);
+    if (cb) setTimeout(cb, 800);
+  }, delay || 1200);
+}
+
+function addMsg(from, html) {
+  const msgs = document.getElementById('chat-msgs');
+  if (!msgs) return;
+  const row = document.createElement('div');
+  row.className = 'brow' + (from === 'user' ? ' user' : '');
+  const av = `<div class="bav ${from}">${from==='mgr'?'🌿':'T'}</div>`;
+  const bub = `<div class="bub ${from}">${html}</div>`;
+  row.innerHTML = from === 'mgr' ? av + bub : bub + av;
+  msgs.appendChild(row);
+  scrollChat();
+  chatHistory.push({role: from === 'mgr' ? 'assistant' : 'user', content: html});
+}
+
+function scrollChat() {
+  const msgs = document.getElementById('chat-msgs');
+  if (msgs) msgs.scrollTop = 9999;
+}
+
+function showActions(btns) {
+  const row = document.getElementById('action-row');
+  if (!row) return;
+  row.innerHTML = btns.map(b =>
+    `<button class="${b.primary ? 'btn-hub-expand' : b.sec ? 'btn-hub-sec' : 'btn-hub-fix'}"
+      onclick="${b.fn}()">${b.label}</button>`
+  ).join('');
+}
+
+function clearActions() {
+  const row = document.getElementById('action-row');
+  if (row) row.innerHTML = '';
+}
+
+// ── Action handlers ───────────────────────────────────────────────────────────
+function hubRepairPrompt() {
+  clearActions();
+  addMsg('user', 'Help fix the failing tests');
+  mgrSay(`I'll start a targeted repair pass using Giant Brain — reading all source files, identifying the root contract mismatch, and issuing surgical fixes. This runs against your existing exports.`, () => {
+    const card = makeBuildCard('🔧 Repair Pass', [
+      '▸ Loading export files and test output…',
+      '▸ Giant Brain audit: tracing failing assertions to root files',
+      '▸ Issuing FixManifest (targeted — no full rewrites)',
+      '▸ Applying patches · re-running test suite…',
+    ]);
+    const msgs = document.getElementById('chat-msgs');
+    if (msgs) { msgs.appendChild(card); scrollChat(); }
+    setTimeout(() => {
+      mgrSay(`Repair pass complete. Re-check the debug panel for updated results. If a design-level issue remains, I'll flag it for a guided session.`);
+    }, 4500);
+  });
+}
+
+function hubExpandPrompt() {
+  clearActions();
+  addMsg('user', 'Start an expansion build');
+  mgrSay(`What do you want to add to <strong>${selectedApp ? selectedApp.name : 'this app'}</strong>? Describe the feature, module, or phase you want to grow next — or just say "Phase 2" and I'll pick up where the roadmap left off.`, () => {
+    const input = document.getElementById('chat-input');
+    if (input) input.focus();
+    showActions([{label:'Cancel', fn:'hubCancelExpand', sec:true}]);
+    window._awaitingExpansion = true;
+  });
+}
+
+function hubCancelExpand() {
+  window._awaitingExpansion = false;
+  clearActions();
+  addMsg('user', 'Cancel');
+  mgrSay(`No problem. I'll be here when you're ready. Is there anything else you'd like to know about this app?`);
+}
+
+function hubRunTests() {
+  clearActions();
+  addMsg('user', 'Run the test suite now');
+  mgrSay(`Running tests on <strong>${selectedApp ? selectedApp.name : 'this app'}</strong>…`, () => {
+    const card = makeBuildCard('🧪 Test Suite', [
+      '▸ TesterSwarm initializing…',
+      '▸ Running pytest on exports directory',
+      '▸ Collecting results…',
+    ]);
+    const msgs = document.getElementById('chat-msgs');
+    if (msgs) { msgs.appendChild(card); scrollChat(); }
+    setTimeout(() => {
+      mgrSay(`Tests complete. Check the DevHub log for full output.`);
+    }, 3200);
+  });
+}
+
+function hubShowBuild() {
+  clearActions();
+  addMsg('user', 'Show me what was built');
+  if (!selectedApp) return;
+  const app = selectedApp;
+  mgrSay(`<strong>${app.name}</strong> — ${app.source_files} source file${app.source_files!==1?'s':''}, ${app.test_files} test file${app.test_files!==1?'s':''}. All files are in the <code>${app.dir}/</code> export folder.`, () => {
+    showActions([
+      {label:'🚀 Launch App', fn:'hubLaunchApp', primary:true},
+      {label:'🌱 Expand it', fn:'hubExpandPrompt'},
+      {label:'← Back', fn:'hubBack', sec:true},
+    ]);
+  });
+}
+
+// ── Launch / Stop ─────────────────────────────────────────────────────────────
+async function hubLaunchApp() {
+  clearActions();
+  if (!selectedApp) return;
+  addMsg('user', 'Launch App');
+  mgrSay(`Starting <strong>${selectedApp.name}</strong>… give me just a second.`, async () => {
+    try {
+      const r = await fetch(`${API}/api/hub/launch`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({app_dir: selectedApp.dir}),
+      });
+      const d = await r.json();
+      if (d.error) {
+        mgrSay(`Couldn't start the app: <em>${d.error}</em>. Check that Canopy is running and the app was built successfully.`);
+        return;
+      }
+      _runningApps[selectedApp.dir] = {url: d.url, port: d.port};
+      // Update sidebar badge
+      document.querySelectorAll('.app-row').forEach(row => {
+        if (row.dataset.dir === selectedApp.dir) {
+          const badge = row.querySelector('.app-badge-ok');
+          if (badge) { badge.textContent = '▶ live'; badge.style.cssText = 'background:#00c853;color:#fff;padding:2px 7px;border-radius:10px;font-size:.7rem;'; }
+        }
+      });
+      const verb = d.already_running ? 'already running' : 'is live';
+      mgrSay(`<strong>${selectedApp.name}</strong> ${verb} at <a href="${d.url}" target="_blank" style="color:var(--gm)">${d.url}</a> — opening it now!`, () => {
+        window.open(d.url, '_blank');
+        showActions([
+          {label:'🔗 Open again', fn:'hubOpenRunning'},
+          {label:'⏹ Stop App', fn:'hubStopApp'},
+          {label:'🌱 Expand it', fn:'hubExpandPrompt'},
+        ]);
+      });
+    } catch(e) {
+      mgrSay(`Launch failed: <em>${e.message}</em>. Make sure Canopy is running.`);
+    }
+  });
+}
+
+function hubOpenRunning() {
+  if (!selectedApp || !_runningApps[selectedApp.dir]) return;
+  window.open(_runningApps[selectedApp.dir].url, '_blank');
+}
+
+async function hubStopApp() {
+  clearActions();
+  if (!selectedApp) return;
+  addMsg('user', 'Stop App');
+  try {
+    await fetch(`${API}/api/hub/stop`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({app_dir: selectedApp.dir}),
+    });
+    delete _runningApps[selectedApp.dir];
+    // Update sidebar badge
+    document.querySelectorAll('.app-row').forEach(row => {
+      if (row.dataset.dir === selectedApp.dir) {
+        const badge = row.querySelector('.app-badge-ok');
+        if (badge) { badge.textContent = '✓'; badge.style.cssText = ''; }
+      }
+    });
+    mgrSay(`<strong>${selectedApp.name}</strong> has been stopped.`, () => {
+      showActions([
+        {label:'🚀 Launch App', fn:'hubLaunchApp', primary:true},
+        {label:'🌱 Expand it', fn:'hubExpandPrompt'},
+      ]);
+    });
+  } catch(e) {
+    mgrSay(`Couldn't stop the app: <em>${e.message}</em>.`);
+  }
+}
+
+function hubBack() {
+  clearActions();
+  const app = selectedApp;
+  if (!app) return;
+  showActions([
+    {label:'🌱 Start an expansion build', fn:'hubExpandPrompt'},
+    {label:'Run the test suite now', fn:'hubRunTests'},
+    {label:'Show me what was built', fn:'hubShowBuild'},
+  ]);
+}
+
+function hubExplainIssue() {
+  clearActions();
+  addMsg('user', 'Tell me more first');
+  const ds = window._lastDebugState;
+  const msg = ds && ds.message ? ds.message :
+    `The repair loop exhausted all rounds without fully converging. This typically means the generated tests have expectations that don't match the generated source — a contract mismatch. The fix is usually either: (1) a targeted module rename/align, or (2) a partial rebuild of the affected module with the correct API contract.`;
+  mgrSay(msg, () => {
+    showActions([
+      {label:'🔧 Try the repair pass', fn:'hubRepairPrompt'},
+      {label:'🌱 Skip to Phase 2', fn:'hubExpandPrompt'},
+    ]);
+  });
+}
+
+// ── Expansion via free-text chat ──────────────────────────────────────────────
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+  addMsg('user', text);
+
+  if (window._awaitingExpansion) {
+    window._awaitingExpansion = false;
+    clearActions();
+    await doExpand(text);
+    return;
+  }
+
+  // Hub-aware AI chat — uses dedicated /api/hub/chat endpoint with troubleshooting context
+  const tr = document.getElementById('typing-row');
+  if (tr) tr.style.display = 'flex';
+  scrollChat();
+
+  try {
+    const r = await fetch(`${API}/api/hub/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: text,
+        history: chatHistory,          // give the AI full conversation context
+        context: { is_hub_chat: true, app: selectedApp }
+      })
+    });
+    const d = await r.json();
+    if (tr) tr.style.display = 'none';
+    const reply = d.response || d.reply || d.message || "I'm not sure — can you tell me more about what you need?";
+    addMsg('mgr', reply);
+
+    // If the AI returned file patches, show an Apply Fix button
+    if (d.fix_files && d.fix_files.length > 0) {
+      _pendingFix = d.fix_files;
+      const msgs = document.getElementById('chat-msgs');
+      if (msgs) {
+        const fixRow = document.createElement('div');
+        fixRow.className = 'brow';
+        fixRow.id = 'apply-fix-row';
+        fixRow.innerHTML = `<div class="bav mgr" style="visibility:hidden"></div>
+          <button class="btn-hub-expand" onclick="applyFix()">
+            🔧 Apply Fix (${d.fix_files.length} file${d.fix_files.length !== 1 ? 's' : ''})
+          </button>`;
+        msgs.appendChild(fixRow);
+        scrollChat();
+      }
+    }
+  } catch(e) {
+    if (tr) tr.style.display = 'none';
+    addMsg('mgr', "I'm having trouble reaching the API right now. Make sure Canopy is running, then try again.");
+  }
+}
+
+async function doExpand(expansionText) {
+  const app = selectedApp;
+  if (!app) return;
+
+  mgrSay(`Got it — planting the expansion seed for <strong>${app.name}</strong> now. I'll read the original context, decompose the new tasks, and spawn the dev swarm.`, () => {
+    const card = makeBuildCard('🌱 Expansion Build Starting', [
+      `▸ Reading PROJECT_CONTEXT.json — ${app.name}`,
+      `▸ Orchestrator decomposing expansion tasks…`,
+      `▸ Routing tasks to model tiers (Flash Lite · Flash Pro · Gemini 3.1)`,
+      `▸ Dev swarm building…`,
+      `▸ Est. ~4 min · monitoring for errors`,
+    ]);
+    const msgs = document.getElementById('chat-msgs');
+    if (msgs) { msgs.appendChild(card); scrollChat(); }
+
+    // Trigger actual expansion build
+    fetch(`${API}/api/hub/expand`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        export_dir: app.dir,
+        expansion_prompt: expansionText
+      })
+    }).then(r => r.json()).then(d => {
+      const sid = d.session_id || '';
+      setTimeout(() => {
+        mgrSay(`Expansion build started (session ${sid}). I'll watch the build and notify you when QC completes. You can track live progress in <a href="/devhub" style="color:var(--gm)">DevHub</a>.`);
+        loadApps(); // Refresh sidebar
+      }, 4500);
+    }).catch(e => {
+      setTimeout(() => {
+        mgrSay(`Expansion build failed to start: ${e.message}. Check that Canopy is running and your API key is set.`);
+      }, 2000);
+    });
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function makeBuildCard(title, lines) {
+  const row = document.createElement('div');
+  row.className = 'brow';
+  row.innerHTML = `<div class="bav mgr">🌿</div><div class="build-card">
+    <div class="build-card-title">${title}</div>
+    ${lines.map(l => `<div class="build-line">${l}</div>`).join('')}
+  </div>`;
+  return row;
+}
+
+function chatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+function autoResize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+}
+
+async function applyFix() {
+  if (!_pendingFix || !selectedApp) return;
+  const fixFiles = _pendingFix;
+  _pendingFix = null;
+
+  // Remove the Apply Fix button
+  const fixRow = document.getElementById('apply-fix-row');
+  if (fixRow) fixRow.remove();
+
+  addMsg('user', `Apply fix (${fixFiles.length} file${fixFiles.length !== 1 ? 's' : ''})`);
+
+  const tr = document.getElementById('typing-row');
+  if (tr) tr.style.display = 'flex';
+  scrollChat();
+
+  try {
+    const r = await fetch(`${API}/api/hub/apply_fix`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ app_dir: selectedApp.dir, fix_files: fixFiles }),
+    });
+    const d = await r.json();
+    if (tr) tr.style.display = 'none';
+    if (d.error) {
+      addMsg('mgr', `Couldn't apply the fix: <em>${d.error}</em>`);
+    } else {
+      const names = (d.written || []).map(p => `<code>${p}</code>`).join(', ');
+      addMsg('mgr', `✅ Fix applied to ${names}. The app is still running — <strong>refresh the app tab</strong> to see the changes (no restart needed for frontend files). If you changed backend code, stop and relaunch the app.`);
+    }
+  } catch(e) {
+    if (tr) tr.style.display = 'none';
+    addMsg('mgr', `Apply failed: <em>${e.message}</em>. Make sure Canopy is running.`);
+  }
+}
+
+function goToSeed() {
+  window.open('/', '_blank');
+}
+
+// ── Update Keys modal ─────────────────────────────────────────────────────────
+function openKeysModal() {
+  document.getElementById('keys-modal-pw').value = '';
+  document.getElementById('keys-modal-google').value = '';
+  document.getElementById('keys-modal-anthropic').value = '';
+  const err = document.getElementById('keys-modal-err');
+  const ok  = document.getElementById('keys-modal-ok');
+  err.classList.add('hidden'); err.textContent = '';
+  ok.classList.add('hidden');  ok.textContent = '';
+  document.getElementById('keys-modal-save-btn').disabled = false;
+  document.getElementById('keys-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('keys-modal-pw').focus(), 80);
+}
+
+function closeKeysModal() {
+  document.getElementById('keys-modal').classList.add('hidden');
+}
+
+async function saveKeys() {
+  const pw       = document.getElementById('keys-modal-pw').value.trim();
+  const google   = document.getElementById('keys-modal-google').value.trim();
+  const anthropic= document.getElementById('keys-modal-anthropic').value.trim();
+  const errEl    = document.getElementById('keys-modal-err');
+  const okEl     = document.getElementById('keys-modal-ok');
+  const btn      = document.getElementById('keys-modal-save-btn');
+
+  errEl.classList.add('hidden'); errEl.textContent = '';
+  okEl.classList.add('hidden');  okEl.textContent = '';
+
+  if (!pw) { errEl.textContent = 'Vault password is required.'; errEl.classList.remove('hidden'); return; }
+  if (!google && !anthropic) { errEl.textContent = 'Enter at least one new key.'; errEl.classList.remove('hidden'); return; }
+
+  const keys = {};
+  if (google)    keys.google_api_key    = google;
+  if (anthropic) keys.anthropic_api_key = anthropic;
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch(`${API}/api/vault/update`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: pw, keys })
+    });
+    const d = await r.json();
+    if (!d.success) {
+      errEl.textContent = d.error || 'Update failed.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Save & Apply →';
+      return;
+    }
+    okEl.textContent = `✅ Updated: ${d.keys_updated.join(', ')} — active immediately, no restart needed.`;
+    okEl.classList.remove('hidden');
+    btn.textContent = 'Saved!';
+    setTimeout(closeKeysModal, 2200);
+  } catch(e) {
+    errEl.textContent = `Request failed: ${e.message}`;
+    errEl.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Save & Apply →';
+  }
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

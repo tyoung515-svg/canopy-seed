@@ -1,0 +1,60 @@
+{
+  "_comment": "Tuneable thresholds for the Complexity Judge. Written by calibration system, read by judge on startup. Edit manually or via calibration acceptance flow.",
+
+  "_version": 1,
+
+  "file_count": {
+    "_doc": "Max file count for each score level. Score 0 = ≤value[0], score 1 = ≤value[1], score 2 = ≤value[2], score 3 = >value[2]",
+    "0": 1,
+    "1": 3,
+    "2": 7
+  },
+
+  "domain_spread": {
+    "_doc": "Number of architectural layers touched. 0=single, 1=two, 2=three, 3=all layers.",
+    "0": 1,
+    "1": 2,
+    "2": 3
+  },
+
+  "ambiguity": {
+    "_doc": "Number of clarifying questions needed. 0=fully specified, 1=1 question, 2=2-3 questions, 3=underspecified.",
+    "0": 0,
+    "1": 1,
+    "2": 3
+  },
+
+  "historical_fail": {
+    "_doc": "Prior failures on similar tasks in changelog. 0=none, 1=1 failure, 2=2+ failures, 3=pattern.",
+    "0": 0,
+    "1": 1,
+    "2": 2
+  },
+
+  "tier_bounds": [
+    [0,  2],
+    [3,  6],
+    [7,  10],
+    [11, 13],
+    [14, 15]
+  ],
+
+  "tier_names": ["lite", "standard", "brain", "heavy", "escalate"],
+
+  "tier_models": [
+    "gemini-flash-lite",
+    "gemini-2.5-flash",
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "claude-opus-4-6"
+  ],
+
+  "tier_token_midpoints": {
+    "_doc": "Expected token midpoint per tier. Used for cost estimation and drift analysis.",
+    "lite":     300,
+    "standard": 4000,
+    "brain":    6300,
+    "heavy":    16000,
+    "escalate": 25000
+  }
+}
